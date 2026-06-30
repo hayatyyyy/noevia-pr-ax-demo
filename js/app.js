@@ -58,6 +58,11 @@ document.querySelectorAll("[data-goto]").forEach((el) => {
   el.addEventListener("click", () => switchView(el.dataset.goto));
 });
 
+document.querySelector("[data-view-link]")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  switchView("dashboard");
+});
+
 document.querySelector(".menu-toggle")?.addEventListener("click", () => {
   const nav = document.querySelector(".main-nav");
   const btn = document.querySelector(".menu-toggle");
@@ -75,8 +80,9 @@ function renderDashboard() {
     .map(
       (pr) => `
       <li>
-        <span class="date">${pr.date} · ${pr.category}</span>
-        ${escapeHtml(pr.title)}
+        <time datetime="${pr.date}">${pr.date.replace(/-/g, "/")}</time>
+        <span class="tag${pr.category === "プレスリリース" ? " tag--pr" : ""}">${escapeHtml(pr.category)}</span>
+        <span class="news-list__title">${escapeHtml(pr.title)}</span>
       </li>`
     )
     .join("");
@@ -415,9 +421,9 @@ function renderReview(r) {
 
   return `
     <div class="overall-score">
-      <div class="score-circle">${r.overall}</div>
+      <div class="score-circle" aria-label="総合スコア ${r.overall}">${r.overall}</div>
       <div>
-        <div class="score-label">総合スコア ${r.overall} / 5</div>
+        <div class="score-label">総合評価</div>
         <p class="text-muted">${scoreLabel}</p>
       </div>
     </div>
@@ -518,12 +524,11 @@ function renderSavedList(openId = null) {
   const empty = document.getElementById("saved-empty");
   const stats = getStorageStats();
 
-  document.getElementById("saved-stats").innerHTML = `
-    <span class="stat-chip">全 ${stats.total} 件</span>
-    ${Object.entries(stats.byStatus)
-      .map(([k, n]) => `<span class="stat-chip">${PR_STATUS_LABELS[k] || k}: ${n}</span>`)
-      .join("")}
-    <span class="stat-chip stat-chip--rag">RAGインデックス済: ${stats.ragReady}</span>`;
+  document.getElementById("saved-stats").textContent = [
+    `全 ${stats.total} 件`,
+    ...Object.entries(stats.byStatus).map(([k, n]) => `${PR_STATUS_LABELS[k] || k} ${n}件`),
+    `RAGインデックス済 ${stats.ragReady} 件`,
+  ].join("　");
 
   if (records.length === 0) {
     tbody.innerHTML = "";
@@ -567,7 +572,7 @@ function renderSavedList(openId = null) {
 }
 
 function statusBadge(status) {
-  return `<span class="status-badge status-badge--${status}">${PR_STATUS_LABELS[status] || status}</span>`;
+  return `<span class="status-badge">${PR_STATUS_LABELS[status] || status}</span>`;
 }
 
 function distBadge(status) {
