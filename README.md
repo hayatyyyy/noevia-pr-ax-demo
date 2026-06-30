@@ -4,7 +4,9 @@
 
 ## デモURL
 
-GitHub Pages で公開後、ここにURLを追記します。
+**https://hayatyyyy.github.io/noevia-pr-ax-demo/**
+
+GitHub リポジトリ: https://github.com/hayatyyyy/noevia-pr-ax-demo
 
 ## 機能（Phase 1 PoC）
 
