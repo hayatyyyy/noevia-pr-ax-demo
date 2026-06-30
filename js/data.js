@@ -197,6 +197,68 @@ export const PRODUCT_PRESETS = [
   },
 ];
 
+/** URLからの商品情報取得（デモ）— 本番ではスクレイピング/API連携 */
+export const DEMO_PRODUCT_URL =
+  "https://www.noieviabeauty.com/product/excel/skinnrich-shadow-n-mauve/";
+
+export const PRODUCT_URL_RULES = [
+  {
+    pattern: /skinnrich|shadow|シャドウ|mauve|モーヴ/i,
+    presetIndex: 0,
+    sourceLabel: "ノエビア公式商品ページ",
+  },
+  {
+    pattern: /brow|眉|mascara|ノーミス/i,
+    presetIndex: 1,
+    sourceLabel: "ノエビア公式商品ページ",
+  },
+  {
+    pattern: /uv|クリーム|ひんやり|sun/i,
+    presetIndex: 2,
+    sourceLabel: "ノエビア公式商品ページ",
+  },
+  {
+    pattern: /noevia|noievia|excel|エクセル|tokiwa|常盤/i,
+    presetIndex: 0,
+    sourceLabel: "公式サイト（デモ推定）",
+  },
+];
+
+export function resolveProductFromUrl(url) {
+  const trimmed = String(url || "").trim();
+  if (!trimmed) return { error: "URLを入力してください。" };
+  try {
+    new URL(trimmed);
+  } catch {
+    return { error: "有効なURL形式で入力してください。" };
+  }
+
+  for (const rule of PRODUCT_URL_RULES) {
+    if (rule.pattern.test(trimmed)) {
+      const preset = PRODUCT_PRESETS[rule.presetIndex];
+      if (!preset) continue;
+      return {
+        product: {
+          name: preset.name,
+          brand: preset.brand,
+          category: preset.category,
+          price: preset.price,
+          releaseType: preset.releaseType,
+          season: preset.season,
+          features: preset.features,
+        },
+        sourceLabel: rule.sourceLabel,
+        sourceUrl: trimmed,
+        matchedPreset: preset.id,
+      };
+    }
+  }
+
+  return {
+    error: "デモではノエビア／エクセル関連の商品URLのみ対応しています。手入力で続行できます。",
+  };
+}
+
 export const MOCK_MEDIA_SUGGESTIONS = [
   { name: "@cosme", category: "Web美容メディア", reason: "20代向け新色・プチプラ訴求の掲載実績多数" },
   { name: "MAQUIA ONLINE", category: "Web美容メディア", reason: "夏コスメ特集との相性が高い" },

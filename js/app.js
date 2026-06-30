@@ -6,6 +6,8 @@ import {
   PAST_PRS,
   SAMPLE_PRODUCT,
   PRODUCT_PRESETS,
+  DEMO_PRODUCT_URL,
+  resolveProductFromUrl,
   MOCK_TARGETING,
   MOCK_PLANNING_MEMO,
   MOCK_REVIEW,
@@ -313,13 +315,93 @@ function populateProductPresets() {
 function applyPreset(index) {
   const preset = PRODUCT_PRESETS[index];
   if (!preset) return;
+  applyProductToForm(preset);
+  renderCreateKpi();
+  clearUrlFetchFeedback();
+}
+
+function applyProductToForm(product, { merge = false } = {}) {
   const form = document.getElementById("product-form");
+  if (!form || !product) return;
   ["name", "brand", "category", "price", "releaseType", "season", "features"].forEach((key) => {
-    if (form.elements[key] && preset[key]) form.elements[key].value = preset[key];
+    const field = form.elements[key];
+    if (!field || product[key] == null) return;
+    if (merge && String(field.value).trim()) return;
+    field.value = product[key];
   });
   currentSession.product = getProductFromForm();
+  if (product.sourceUrl) {
+    currentSession.product.sourceUrl = product.sourceUrl;
+  }
   updateScenarioText();
-  renderCreateKpi();
+}
+
+function hasProductFormContent() {
+  const form = document.getElementById("product-form");
+  if (!form) return false;
+  return ["name", "brand", "category", "price", "season", "features"].some((key) => {
+    const field = form.elements[key];
+    return field && String(field.value).trim();
+  });
+}
+
+function clearUrlFetchFeedback() {
+  const feedback = document.getElementById("url-fetch-feedback");
+  if (feedback) feedback.hidden = true;
+}
+
+function showUrlFetchFeedback(type, message, details = "") {
+  const feedback = document.getElementById("url-fetch-feedback");
+  if (!feedback) return;
+  feedback.hidden = false;
+  feedback.className = `url-fetch-feedback url-fetch-feedback--${type}`;
+  feedback.innerHTML = `
+    <p class="url-fetch-feedback__message">${escapeHtml(message)}</p>
+    ${details ? `<p class="url-fetch-feedback__detail text-muted">${escapeHtml(details)}</p>` : ""}`;
+}
+
+function fetchProductFromUrl() {
+  const input = document.getElementById("product-url-input");
+  const loading = document.getElementById("url-fetch-loading");
+  const btn = document.getElementById("fetch-product-url-btn");
+  if (!input || !loading) return;
+
+  const url = input.value.trim();
+  const resolved = resolveProductFromUrl(url);
+  if (resolved.error) {
+    showUrlFetchFeedback("error", resolved.error);
+    return;
+  }
+
+  const applyFetch = (merge) => {
+    applyProductToForm({ ...resolved.product, sourceUrl: resolved.sourceUrl }, { merge });
+    const filled = Object.values(resolved.product).filter(Boolean).length;
+    showUrlFetchFeedback(
+      "success",
+      `${filled}項目をフォームに反映しました`,
+      `取得元：${resolved.sourceLabel}（デモ）— 内容は手入力で修正できます`
+    );
+    renderCreateKpi();
+    document.getElementById("product-form")?.querySelector('[name="name"]')?.focus();
+  };
+
+  if (hasProductFormContent()) {
+    const overwrite = window.confirm(
+      "入力済みの項目があります。URLの情報で上書きしますか？\n\n「キャンセル」を選ぶと、空欄のみ補完します。"
+    );
+    applyFetch(!overwrite);
+    return;
+  }
+
+  loading.hidden = false;
+  if (btn) btn.disabled = true;
+  clearUrlFetchFeedback();
+
+  setTimeout(() => {
+    loading.hidden = true;
+    if (btn) btn.disabled = false;
+    applyFetch(false);
+  }, MOCK_DELAY);
 }
 
 function updateScenarioText() {
@@ -740,12 +822,25 @@ function setStep(step) {
 }
 
 function fillProductForm() {
-  const form = document.getElementById("product-form");
-  Object.entries(SAMPLE_PRODUCT).forEach(([key, val]) => {
-    const field = form.elements[key];
-    if (field) field.value = val;
-  });
+  applyProductToForm(SAMPLE_PRODUCT);
 }
+
+document.getElementById("fetch-product-url-btn")?.addEventListener("click", () => {
+  fetchProductFromUrl();
+});
+
+document.getElementById("fill-demo-url-btn")?.addEventListener("click", () => {
+  const input = document.getElementById("product-url-input");
+  if (input) input.value = DEMO_PRODUCT_URL;
+  clearUrlFetchFeedback();
+});
+
+document.getElementById("product-url-input")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    fetchProductFromUrl();
+  }
+});
 
 document.getElementById("product-form").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -768,7 +863,7 @@ document.getElementById("demo-run-create-btn")?.addEventListener("click", () => 
 
 function getProductFromForm() {
   const form = document.getElementById("product-form");
-  return {
+  const product = {
     name: form.elements.name.value,
     brand: form.elements.brand.value,
     category: form.elements.category.value,
@@ -777,6 +872,11 @@ function getProductFromForm() {
     season: form.elements.season.value,
     features: form.elements.features.value,
   };
+  const urlInput = document.getElementById("product-url-input");
+  if (urlInput?.value.trim()) {
+    product.sourceUrl = urlInput.value.trim();
+  }
+  return product;
 }
 
 function runTargetingMock() {

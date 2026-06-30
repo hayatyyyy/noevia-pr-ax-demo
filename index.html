@@ -38,7 +38,7 @@
     <header class="site-header">
       <div class="header-top">
         <p class="header-group">ノエビアグループ向け PoC — UX確認用デモ</p>
-        <p class="header-note">AI応答はサンプルです<span class="demo-version">v1.5</span></p>
+        <p class="header-note">AI応答はサンプルです<span class="demo-version">v1.5.1</span></p>
       </div>
       <div class="header-inner">
         <p class="site-title"><a href="#" data-view-link="create">プレスリリース作成支援</a></p>
@@ -266,6 +266,7 @@
               <p class="scenario-banner__text" id="scenario-text">エクセル「スキニーリッチシャドウ N」透明感モーヴカラー新色のPRを作成します。</p>
             </div>
             <h3 class="panel-title">商品情報</h3>
+            <p class="product-form__lead text-muted">基本は下記フォームへの<strong>手入力</strong>です。必要に応じてURLから項目を補完できます。</p>
             <label class="full-width preset-label">
               サンプル商品（切替可）
               <select id="product-preset" name="preset"></select>
@@ -305,6 +306,39 @@
                 <textarea name="features" rows="3"></textarea>
               </label>
             </div>
+
+            <div class="url-import-panel" id="url-import-panel">
+              <div class="url-import-panel__header">
+                <h4 class="url-import-panel__title">URLから情報を取得</h4>
+                <span class="badge badge--sub">補助</span>
+              </div>
+              <p class="url-import-panel__desc text-muted">
+                公式商品ページなどのURLを指定すると、商品名・特徴などをフォームに反映します。取得後も手入力で修正してください。
+              </p>
+              <div class="url-import-row">
+                <label class="url-import-field">
+                  <span class="visually-hidden">商品ページURL</span>
+                  <input
+                    type="url"
+                    id="product-url-input"
+                    class="url-import-input"
+                    placeholder="https://www.noieviabeauty.com/product/..."
+                    autocomplete="off"
+                  />
+                </label>
+                <button type="button" class="btn btn-secondary" id="fetch-product-url-btn">情報を取得</button>
+              </div>
+              <div class="url-import-actions">
+                <button type="button" class="btn-text" id="fill-demo-url-btn">デモ用URLをセット</button>
+                <span class="url-import-note text-muted">PoCデモではサンプルURLのみ自動反映</span>
+              </div>
+              <div class="url-fetch-loading loading-state" id="url-fetch-loading" hidden>
+                <div class="spinner" aria-hidden="true"></div>
+                <p>商品ページから情報を取得中…</p>
+              </div>
+              <div class="url-fetch-feedback" id="url-fetch-feedback" hidden role="status"></div>
+            </div>
+
             <div class="form-actions">
               <button type="button" class="btn btn-primary btn-lg" id="demo-run-create-btn">体験デモを開始（全ステップ）</button>
               <button type="submit" class="btn btn-secondary">1ステップずつ進む</button>
