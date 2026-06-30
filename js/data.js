@@ -220,3 +220,101 @@ export const AGENT_MESSAGES = [
     text: "では切り口候補を3案整理します。\n\n1. **実績×新色** — 旧品比220%の好調さ＋モーヴ新色\n2. **夏の透明感** — くすみオフ・透明感メイクの季節訴求\n3. **時短4色** — 1パレットで完結する朝メイク\n\n右側の「PR企画メモ」に詳細を出力しました。修正があればお知らせください。",
   },
 ];
+
+/** 初期表示用シード — localStorage が空のとき投入 */
+export const SEED_SAVED_PRS = [
+  {
+    id: "seed-pr-001",
+    createdAt: "2026-06-10T09:00:00.000Z",
+    updatedAt: "2026-06-18T14:30:00.000Z",
+    status: "published",
+    title: "『エクセル』スキニーリッチシャドウ N 透明感モーヴカラー新登場",
+    product: {
+      name: "スキニーリッチシャドウ N",
+      brand: "エクセル",
+      category: "アイシャドウ（メイクアップ）",
+      releaseType: "新色追加",
+    },
+    targeting: MOCK_TARGETING,
+    draft: {
+      body: "『エクセル』、リニューアル発売初月の売上が旧品比220%と好調の「スキニーリッチシャドウ N」から、新たに「透明感モーヴカラー」登場。",
+      headlineCandidates: ["旧品比220%好調の人気パレットにモーヴ新色"],
+    },
+    review: { overall: 4, reviewedAt: "2026-06-10T10:00:00.000Z" },
+    distribution: {
+      status: "published",
+      scheduledDate: "2026-06-10",
+      distributedAt: "2026-06-10",
+      media: [
+        {
+          id: "m1",
+          name: "@cosme",
+          category: "Web美容メディア",
+          contact: "press@cosme.net",
+          status: "published",
+          publishedUrl: "https://example.com/cosme/excel-mauve",
+          publishedAt: "2026-06-12",
+          estimatedImp: 18200,
+          notes: "新色特集に掲載。画像使用可。",
+        },
+        {
+          id: "m2",
+          name: "MAQUIA ONLINE",
+          category: "Web美容メディア",
+          contact: "",
+          status: "sent",
+          publishedUrl: "",
+          publishedAt: "",
+          estimatedImp: null,
+          notes: "6/15送付。返信待ち。",
+        },
+      ],
+    },
+    performance: { estimatedImp: 18200, snsMentions: 340, reprints: 5, adEquivalent: 450000 },
+    memo: "旧品比220%の数値訴求が刺さった。次回も実績数値型を優先。",
+    tags: ["エクセル", "アイシャドウ", "実績数値型", "夏コスメ"],
+  },
+  {
+    id: "seed-pr-002",
+    createdAt: "2026-06-19T11:00:00.000Z",
+    updatedAt: "2026-06-20T09:00:00.000Z",
+    status: "distributed",
+    title: "『エクセル』ノーミス眉マスカラ — ニュアンス薄眉",
+    product: {
+      name: "ノーミス眉マスカラ",
+      brand: "エクセル",
+      category: "眉メイク",
+      releaseType: "新規発売",
+    },
+    targeting: {
+      mainTarget: "20〜30代女性、眉メイクに悩みがある層",
+      keywords: ["薄眉", "ニュアンス眉", "時短"],
+    },
+    draft: {
+      body: "塗るほど眉が目立ってしまう悩みに。『エクセル』の新「ノーミス眉マスカラ」で、誰でも簡単にふんわり軽やかなニュアンス薄眉に。",
+      headlineCandidates: [],
+    },
+    review: { overall: 5, reviewedAt: "2026-06-19T12:00:00.000Z" },
+    distribution: {
+      status: "sent",
+      scheduledDate: "2026-06-22",
+      distributedAt: "2026-06-22",
+      media: [
+        {
+          id: "m3",
+          name: "美的",
+          category: "美容誌",
+          contact: "編集部",
+          status: "candidate",
+          publishedUrl: "",
+          publishedAt: "",
+          estimatedImp: null,
+          notes: "7月号掲載候補。フォローアップ予定。",
+        },
+      ],
+    },
+    performance: { estimatedImp: null, snsMentions: 120, reprints: 0, adEquivalent: null },
+    memo: "",
+    tags: ["エクセル", "眉メイク", "新規発売"],
+  },
+];

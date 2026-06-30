@@ -31,6 +31,7 @@
           <button type="button" class="nav-btn" data-view="assets">PR資産・型化</button>
           <button type="button" class="nav-btn" data-view="create">新規PR作成</button>
           <button type="button" class="nav-btn" data-view="review">AIレビュー</button>
+          <button type="button" class="nav-btn" data-view="saved">保存PRリスト</button>
         </nav>
         <button type="button" class="menu-toggle" aria-label="メニューを開く" aria-expanded="false">
           <span></span><span></span><span></span>
@@ -97,6 +98,7 @@
               <li class="is-in">ターゲティング予測</li>
               <li class="is-in">PR整理エージェント</li>
               <li class="is-in">配信前AIレビュー</li>
+              <li class="is-in">保存PRリスト（DB/RAG準備）</li>
               <li class="is-out">類似PR検索（Phase 2）</li>
               <li class="is-out">メディア管理（Phase 2）</li>
               <li class="is-out">自動配信（Phase 3）</li>
@@ -316,7 +318,99 @@
               <p>ブランドトーン・法令観点をチェック中…</p>
             </div>
             <div id="review-result"></div>
+            <div class="save-panel" id="save-panel" hidden>
+              <hr class="panel-divider" />
+              <h4 class="save-panel__title">レビュー結果を保存</h4>
+              <p class="text-muted save-panel__desc">
+                原稿・レビュー・商品情報を1レコードに保存します。Phase 3 では Supabase / pgvector へ移行し RAG の学習データになります。
+              </p>
+              <form id="save-pr-form" class="save-form">
+                <div class="form-grid">
+                  <label class="full-width">
+                    PRタイトル（管理用）
+                    <input type="text" name="title" required placeholder="例：エクセル スキニーリッチシャドウ 新色PR" />
+                  </label>
+                  <label>
+                    ステータス
+                    <select name="status" id="save-status-select"></select>
+                  </label>
+                  <label>
+                    配信状況
+                    <select name="distributionStatus" id="save-distribution-select"></select>
+                  </label>
+                  <label>
+                    配信予定日
+                    <input type="date" name="scheduledDate" />
+                  </label>
+                  <label class="full-width">
+                    メモ（次回PRへの引き継ぎ）
+                    <textarea name="memo" rows="2" placeholder="媒体へのフォロー方針、効果の所感など"></textarea>
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" id="save-pr-btn">保存する</button>
+                  <span class="save-feedback" id="save-feedback" hidden></span>
+                </div>
+              </form>
+            </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Saved PR List -->
+      <section id="view-saved" class="view" aria-labelledby="saved-heading" hidden>
+        <div class="page-header">
+          <h2 id="saved-heading">保存PRリスト</h2>
+          <p>
+            レビュー済み原稿・配信状況・媒体・効果を蓄積します。JSONエクスポートで DB 移行、RAG インデックスの元データとして利用できます。
+          </p>
+        </div>
+
+        <div class="saved-toolbar">
+          <label>
+            ステータス
+            <select id="saved-filter-status">
+              <option value="">すべて</option>
+            </select>
+          </label>
+          <div class="saved-toolbar__actions">
+            <button type="button" class="btn btn-secondary" id="export-json-btn">JSONエクスポート</button>
+            <label class="btn btn-secondary import-btn">
+              JSONインポート
+              <input type="file" id="import-json-input" accept="application/json,.json" hidden />
+            </label>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="saved-stats" id="saved-stats"></div>
+          <div class="table-wrap">
+            <table class="data-table saved-table">
+              <thead>
+                <tr>
+                  <th>更新日</th>
+                  <th>タイトル</th>
+                  <th>ブランド</th>
+                  <th>ステータス</th>
+                  <th>配信状況</th>
+                  <th>媒体数</th>
+                  <th>推定IMP</th>
+                  <th>スコア</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="saved-table-body"></tbody>
+            </table>
+          </div>
+          <p class="empty-state" id="saved-empty" hidden>保存されたPRはまだありません。AIレビュー後に「保存する」で追加できます。</p>
+        </div>
+
+        <div class="panel saved-detail-panel" id="saved-detail-panel" hidden>
+          <div class="panel-header-row">
+            <h3 class="panel-title">PR詳細・編集</h3>
+            <button type="button" class="btn btn-secondary btn-sm" id="close-detail-btn">閉じる</button>
+          </div>
+          <form id="detail-form"></form>
         </div>
       </section>
     </main>
