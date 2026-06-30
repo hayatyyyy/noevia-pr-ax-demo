@@ -20,11 +20,25 @@ GitHub リポジトリ: https://github.com/hayatyyyy/noevia-pr-ax-demo
 
 ## ローカル確認
 
+**重要:** `index.html` を Finder からダブルクリックで開く（`file://`）と **JavaScript が読み込めず**、画面が更新されません。必ずローカルサーバー経由で開いてください。
+
+```bash
+cd demo
+chmod +x serve.sh   # 初回のみ
+./serve.sh          # → http://localhost:8080/
+```
+
+または:
+
 ```bash
 cd demo
 python3 -m http.server 8080
-# http://localhost:8080 を開く
+# ブラウザで http://localhost:8080/ を開く
 ```
+
+**更新確認:** ヘッダー右上に `v1.4` バッジが表示されていれば最新版です。キャッシュが残る場合は **Cmd+Shift+R**（スーパーリロード）してください。
+
+**UX確認の入口:** 起動後は「PR作成」画面が最初に開きます。「体験デモを開始」で全ステップを約1分で確認できます。
 
 ## データ永続化（PoC → Phase 3）
 
@@ -37,8 +51,8 @@ python3 -m http.server 8080
 ### PRレコード主要フィールド
 
 - `status` — 下書き / レビュー済 / 承認済 / 配信済 / 掲載済
-- `distribution` — 配信状況、媒体リスト（ステータス・URL・IMP）
-- `performance` — 推定IMP、SNS反響、転載数、広告換算
+- `distribution` — 配信状況、媒体リスト（ステータス・URL・PR TIMES view）
+- `performance` — PR TIMES view、SNS反響、転載数、広告換算
 - `ragMeta.chunkText` — RAG用テキスト（保存時に自動生成）
 
 ## 技術

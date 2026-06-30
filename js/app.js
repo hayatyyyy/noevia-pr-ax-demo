@@ -1,13 +1,18 @@
 import {
   BRAND,
+  BRAND_STATS,
   PR_PATTERNS,
   APPEAL_AXES,
   PAST_PRS,
   SAMPLE_PRODUCT,
+  PRODUCT_PRESETS,
   MOCK_TARGETING,
   MOCK_PLANNING_MEMO,
   MOCK_REVIEW,
+  MOCK_MEDIA_SUGGESTIONS,
+  MOCK_TREND_INSIGHTS,
   SAMPLE_DRAFT,
+  REVISED_DRAFT,
   AGENT_MESSAGES,
   SEED_SAVED_PRS,
 } from "./data.js";
@@ -32,6 +37,21 @@ import {
 } from "./storage.js";
 
 const patternLabelMap = Object.fromEntries(PR_PATTERNS.map((p) => [p.id, p.label]));
+const MOCK_DELAY = 600;
+const CREATE_STEP_LABELS = ["商品情報", "読者・媒体", "外部トレンド", "切り口整理", "企画メモ"];
+const CREATE_STEP_COUNT = CREATE_STEP_LABELS.length;
+
+function getRecordPrtimesViews(record) {
+  return record?.performance?.prtimesViews ?? record?.performance?.estimatedImp ?? null;
+}
+
+function getPastPrPrtimesViews(pr) {
+  return pr.prtimesViews ?? pr.impressions ?? 0;
+}
+
+function getMediaPrtimesViews(media) {
+  return media?.prtimesViews ?? media?.estimatedImp ?? null;
+}
 
 /* ── Navigation ── */
 function switchView(viewId) {
@@ -41,26 +61,72 @@ function switchView(viewId) {
     v.hidden = !active;
   });
   document.querySelectorAll(".nav-btn").forEach((btn) => {
-    btn.classList.toggle("is-active", btn.dataset.view === viewId);
+    const isActive = btn.dataset.view === viewId;
+    btn.classList.toggle("is-active", isActive);
   });
   document.querySelector(".main-nav")?.classList.remove("is-open");
   window.scrollTo({ top: 0, behavior: "smooth" });
+  initView(viewId);
+}
+
+function initView(viewId) {
+  switch (viewId) {
+    case "guide":
+      renderGuide();
+      break;
+    case "assets":
+      renderAssets();
+      if (!assetsBootstrapped && PAST_PRS.length > 0) {
+        assetsBootstrapped = true;
+        showPrDetail(PAST_PRS[0].id);
+      }
+      break;
+    case "create":
+      bootstrapCreateView();
+      break;
+    case "review":
+      bootstrapReviewView();
+      break;
+    case "saved":
+      renderSavedList(null, !savedBootstrapped);
+      savedBootstrapped = true;
+      break;
+  }
+}
+
+function renderKpi(containerId, items) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = items
+    .map(
+      (item) => `
+    <div class="kpi-item${item.highlight ? " kpi-item--highlight" : ""}">
+      <span class="kpi-item__value">${escapeHtml(item.value)}</span>
+      <span class="kpi-item__label">${escapeHtml(item.label)}</span>
+    </div>`
+    )
+    .join("");
 }
 
 document.querySelectorAll(".nav-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    switchView(btn.dataset.view);
-    if (btn.dataset.view === "saved") renderSavedList();
-  });
+  btn.addEventListener("click", () => switchView(btn.dataset.view));
 });
 
 document.querySelectorAll("[data-goto]").forEach((el) => {
-  el.addEventListener("click", () => switchView(el.dataset.goto));
+  el.addEventListener("click", () => {
+    switchView(el.dataset.goto);
+    if (el.dataset.startDemo === "true") {
+      fillProductForm();
+      currentSession.product = getProductFromForm();
+      chatIndex = 0;
+      runCreateDemoFlow(true);
+    }
+  });
 });
 
 document.querySelector("[data-view-link]")?.addEventListener("click", (e) => {
   e.preventDefault();
-  switchView("dashboard");
+  switchView("create");
 });
 
 document.querySelector(".menu-toggle")?.addEventListener("click", () => {
@@ -70,8 +136,8 @@ document.querySelector(".menu-toggle")?.addEventListener("click", () => {
   btn.setAttribute("aria-expanded", String(open));
 });
 
-/* ── Dashboard ── */
-function renderDashboard() {
+/* ── Guide (home for PR staff) ── */
+function renderGuide() {
   document.getElementById("dash-brand-name").textContent = BRAND.name;
   document.getElementById("dash-brand-tone").textContent = BRAND.tone;
 
@@ -90,14 +156,21 @@ function renderDashboard() {
 
 /* ── Assets ── */
 function renderAssets() {
-  document.getElementById("pr-count-label").textContent = `${PAST_PRS.length}件を分析（サンプル）`;
+  renderKpi("assets-kpi", [
+    { value: `${BRAND_STATS.analyzedCount}件`, label: "分析対象PR", highlight: true },
+    { value: BRAND_STATS.topPattern, label: "最多タイトル型" },
+    { value: `${BRAND_STATS.avgPrtimesViews.toLocaleString()}`, label: "平均 PR TIMES view" },
+    { value: BRAND_STATS.period, label: "分析期間" },
+  ]);
+
+  document.getElementById("pr-count-label").textContent = `表示 ${PAST_PRS.length}件 / 分析 ${BRAND_STATS.analyzedCount}件`;
 
   document.getElementById("pattern-list").innerHTML = PR_PATTERNS.map(
     (p) => `
     <div class="pattern-item">
       <div class="pattern-item__header">
         <h4>${escapeHtml(p.label)}</h4>
-        <span class="pattern-freq">${p.frequency}%</span>
+        <span class="pattern-freq pattern-freq--strong">${p.frequency}%</span>
       </div>
       <p>${escapeHtml(p.description)}</p>
       <div class="pattern-example">${escapeHtml(p.examples[0])}</div>
@@ -105,28 +178,36 @@ function renderAssets() {
   ).join("");
 
   document.getElementById("appeal-chart").innerHTML = APPEAL_AXES.map(
-    (a) => `
+    (a, i) => `
     <div class="appeal-bar">
       <div class="appeal-bar__label">
         <span>${escapeHtml(a.label)}</span>
-        <span>${a.pct}%</span>
+        <span class="appeal-bar__pct">${a.pct}%</span>
       </div>
       <div class="appeal-bar__track">
-        <div class="appeal-bar__fill" style="width: ${a.pct}%"></div>
+        <div class="appeal-bar__fill appeal-bar__fill--${i === 0 ? "primary" : "default"}" style="width: ${a.pct}%"></div>
       </div>
     </div>`
   ).join("");
 
   document.getElementById("pr-table-body").innerHTML = PAST_PRS.map(
     (pr) => `
-    <tr>
-      <td>${pr.date}</td>
+    <tr class="pr-row" data-pr-id="${pr.id}" tabindex="0">
+      <td>${pr.date.replace(/-/g, "/")}</td>
       <td><span class="tag ${pr.category === "プレスリリース" ? "tag--pr" : ""}">${pr.category}</span></td>
-      <td>${escapeHtml(pr.title)}</td>
-      <td>${escapeHtml(patternLabelMap[pr.pattern] || pr.pattern)}</td>
-      <td>${pr.impressions.toLocaleString()}</td>
+      <td class="pr-row__title">${escapeHtml(pr.title)}</td>
+      <td><span class="tag tag--type">${escapeHtml(patternLabelMap[pr.pattern] || pr.pattern)}</span></td>
+      <td class="num-cell">${getPastPrPrtimesViews(pr).toLocaleString()}</td>
     </tr>`
   ).join("");
+
+  document.querySelectorAll(".pr-row").forEach((row) => {
+    const open = () => showPrDetail(row.dataset.prId);
+    row.addEventListener("click", open);
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") open();
+    });
+  });
 
   document.getElementById("brand-tone-text").textContent = BRAND.tone;
   document.getElementById("brand-forbidden-list").innerHTML = BRAND.forbidden
@@ -134,17 +215,507 @@ function renderAssets() {
     .join("");
 }
 
-/* ── Create flow ── */
+function showPrDetail(id) {
+  const pr = PAST_PRS.find((p) => p.id === id);
+  if (!pr) return;
+  const panel = document.getElementById("pr-detail-panel");
+  panel.hidden = false;
+  document.querySelectorAll(".pr-row").forEach((r) => {
+    r.classList.toggle("is-selected", r.dataset.prId === id);
+  });
+  document.getElementById("pr-detail-content").innerHTML = `
+    <dl class="detail-dl">
+      <dt>日付</dt><dd>${pr.date.replace(/-/g, "/")}</dd>
+      <dt>カテゴリ</dt><dd><span class="tag ${pr.category === "プレスリリース" ? "tag--pr" : ""}">${pr.category}</span></dd>
+      <dt>タイトル型</dt><dd>${escapeHtml(patternLabelMap[pr.pattern])}</dd>
+      <dt>PR TIMES view</dt><dd class="num-cell">${getPastPrPrtimesViews(pr).toLocaleString()}</dd>
+      <dt>タイトル</dt><dd>${escapeHtml(pr.title)}</dd>
+      ${pr.body ? `<dt>概要</dt><dd>${escapeHtml(pr.body)}</dd>` : ""}
+    </dl>
+    <p class="text-muted">※ 配信済みPRのサンプルデータです。PR作成時にAIが参照する「勝ちパターン」の元になります。</p>`;
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+let createBootstrapped = false;
+let reviewBootstrapped = false;
+let savedBootstrapped = false;
+let assetsBootstrapped = false;
+
+function updateFlowProgress(step) {
+  document.querySelectorAll(".flow-progress__item").forEach((el) => {
+    const s = Number(el.dataset.flowStep);
+    el.classList.toggle("is-active", s === step);
+    el.classList.toggle("is-done", s < step);
+  });
+}
+
+function bootstrapCreateView() {
+  fillProductForm();
+  updateScenarioText();
+  if (!createBootstrapped) {
+    setStep(1);
+    chatIndex = 0;
+    createBootstrapped = true;
+  }
+  renderCreateKpi();
+  updateFlowProgress(currentStep);
+}
+
+function renderCreateKpi() {
+  const p = currentSession.product || SAMPLE_PRODUCT;
+  renderKpi("create-kpi", [
+    { value: p.name, label: "商品", highlight: true },
+    { value: p.brand, label: "ブランド" },
+    { value: CREATE_STEP_LABELS[currentStep - 1] || "—", label: `現在：${currentStep}/${CREATE_STEP_COUNT}` },
+    { value: p.releaseType, label: "発売区分" },
+  ]);
+}
+
+function bootstrapReviewView() {
+  renderReviewMeta();
+  renderKpi("review-kpi", [
+    { value: "エクセル", label: "ブランド", highlight: true },
+    { value: "スキニーリッチシャドウ N", label: "商品" },
+    { value: "実績数値型", label: "参考PR型" },
+    { value: reviewBootstrapped ? "チェック済" : "未チェック", label: "状態" },
+  ]);
+  updateFlowProgress(6);
+
+  if (!reviewBootstrapped) {
+    reviewBootstrapped = true;
+    document.getElementById("draft-input").value = SAMPLE_DRAFT;
+    runReviewMock(true);
+  }
+}
+
+function renderReviewMeta() {
+  const p = currentSession.product || SAMPLE_PRODUCT;
+  const el = document.getElementById("review-meta");
+  if (!el) return;
+  el.innerHTML = `
+    <dl class="meta-dl">
+      <dt>商品</dt><dd>${escapeHtml(p.name)}（${escapeHtml(p.brand)}）</dd>
+      <dt>想定媒体</dt><dd>${MOCK_MEDIA_SUGGESTIONS.map((m) => m.name).join("、")}</dd>
+    </dl>`;
+}
+
+function populateProductPresets() {
+  const sel = document.getElementById("product-preset");
+  if (!sel) return;
+  sel.innerHTML = PRODUCT_PRESETS.map(
+    (p, i) => `<option value="${i}" ${i === 0 ? "selected" : ""}>${escapeHtml(p.label)}</option>`
+  ).join("");
+  sel.addEventListener("change", () => {
+    applyPreset(Number(sel.value));
+  });
+}
+
+function applyPreset(index) {
+  const preset = PRODUCT_PRESETS[index];
+  if (!preset) return;
+  const form = document.getElementById("product-form");
+  ["name", "brand", "category", "price", "releaseType", "season", "features"].forEach((key) => {
+    if (form.elements[key] && preset[key]) form.elements[key].value = preset[key];
+  });
+  currentSession.product = getProductFromForm();
+  updateScenarioText();
+  renderCreateKpi();
+}
+
+function updateScenarioText() {
+  const p = currentSession.product || SAMPLE_PRODUCT;
+  const el = document.getElementById("scenario-text");
+  if (el) {
+    el.textContent = `${p.brand}「${p.name}」— ${p.releaseType}（${p.season}）のPRを作成します。`;
+  }
+}
+
+function runCreateDemoFlow(full = true) {
+  currentSession.product = getProductFromForm();
+  currentSession.targeting = cloneTargeting(MOCK_TARGETING);
+  currentSession.trendSelections = null;
+  currentSession.planningMemo = MOCK_PLANNING_MEMO;
+  setStep(2);
+  showTargetingResult();
+  renderCreateKpi();
+
+  if (full) {
+    setTimeout(() => {
+      setStep(3);
+      showTrendResult();
+      renderCreateKpi();
+    }, MOCK_DELAY);
+    setTimeout(() => {
+      setStep(4);
+      renderAgentChatComplete();
+      renderCreateKpi();
+    }, MOCK_DELAY * 2);
+    setTimeout(() => {
+      renderPlanningMemo();
+      setStep(5);
+      renderCreateKpi();
+    }, MOCK_DELAY * 3);
+  }
+}
+
+function showTargetingResult() {
+  const loading = document.getElementById("targeting-loading");
+  const result = document.getElementById("targeting-result");
+  const note = document.getElementById("targeting-save-note");
+  loading.hidden = true;
+  result.hidden = false;
+  if (note) note.hidden = false;
+  if (!currentSession.targeting) {
+    currentSession.targeting = cloneTargeting(MOCK_TARGETING);
+  }
+  renderTargetingForm(currentSession.targeting);
+  populateTargetingSidebar();
+}
+
+function populateTargetingSidebar() {
+  document.getElementById("ref-patterns").innerHTML = PR_PATTERNS.filter((p) =>
+    ["numeric", "limited"].includes(p.id)
+  )
+    .map((p) => `<li><strong>${escapeHtml(p.label)}</strong> — ${escapeHtml(p.description)}</li>`)
+    .join("");
+  document.getElementById("media-suggest-list").innerHTML = MOCK_MEDIA_SUGGESTIONS.map(
+    (m) => `<li><strong>${escapeHtml(m.name)}</strong>（${escapeHtml(m.category)}）<br><span class="text-muted">${escapeHtml(m.reason)}</span></li>`
+  ).join("");
+}
+
+function initDefaultTrendSelections() {
+  currentSession.trendSelections = MOCK_TREND_INSIGHTS.recommendations
+    .filter((r) => r.relevance === "high")
+    .map((r) => r.id);
+}
+
+function getSelectedTrendRecommendations() {
+  const ids = currentSession.trendSelections || [];
+  return MOCK_TREND_INSIGHTS.recommendations.filter((r) => ids.includes(r.id));
+}
+
+function runTrendMock() {
+  const loading = document.getElementById("trend-loading");
+  const result = document.getElementById("trend-result");
+  if (!loading || !result) return;
+  if (!result.hidden) {
+    if (!currentSession.trendSelections?.length) initDefaultTrendSelections();
+    renderTrendRecommendations();
+    populateTrendSidebar();
+    return;
+  }
+  loading.hidden = false;
+  result.hidden = true;
+
+  setTimeout(() => {
+    showTrendResult();
+    renderCreateKpi();
+  }, MOCK_DELAY);
+}
+
+function showTrendResult() {
+  const loading = document.getElementById("trend-loading");
+  const result = document.getElementById("trend-result");
+  if (!result) return;
+  if (loading) loading.hidden = true;
+  result.hidden = false;
+  if (!currentSession.trendSelections?.length) {
+    initDefaultTrendSelections();
+  }
+  renderTrendRecommendations();
+  populateTrendSidebar();
+}
+
+function populateTrendSidebar() {
+  const list = document.getElementById("trend-sources-list");
+  if (!list) return;
+  list.innerHTML = MOCK_TREND_INSIGHTS.sources
+    .map((s) => `<li><strong>${escapeHtml(s.label)}</strong><br><span class="text-muted">${escapeHtml(s.desc)}</span></li>`)
+    .join("");
+  const meta = document.getElementById("trend-meta");
+  if (meta) {
+    meta.textContent = `取得日：${MOCK_TREND_INSIGHTS.fetchedAt.replace(/-/g, "/")}（${MOCK_TREND_INSIGHTS.periodLabel}）`;
+  }
+}
+
+function renderTrendRecommendations() {
+  const summary = document.getElementById("trend-summary");
+  const list = document.getElementById("trend-rec-list");
+  const countEl = document.getElementById("trend-selected-count");
+  if (!list) return;
+
+  if (summary) summary.textContent = MOCK_TREND_INSIGHTS.summary;
+
+  const selected = new Set(currentSession.trendSelections || []);
+  list.innerHTML = MOCK_TREND_INSIGHTS.recommendations
+    .map((r) => {
+      const checked = selected.has(r.id);
+      return `
+    <li class="trend-rec-card trend-rec-card--${r.category}${checked ? " is-selected" : ""}">
+      <label class="trend-rec-card__label">
+        <input type="checkbox" class="trend-rec-card__check" data-trend-id="${r.id}" ${checked ? "checked" : ""} />
+        <span class="trend-rec-card__body">
+          <span class="trend-rec-card__meta">
+            <span class="trend-badge trend-badge--${r.category}">${escapeHtml(r.categoryLabel)}</span>
+            <span class="trend-relevance trend-relevance--${r.relevance}">${r.relevance === "high" ? "一致度：高" : "一致度：中"}</span>
+          </span>
+          <strong class="trend-rec-card__headline">${escapeHtml(r.headline)}</strong>
+          <p class="trend-rec-card__detail">${escapeHtml(r.detail)}</p>
+          <p class="trend-rec-card__suggest"><span class="trend-rec-card__suggest-label">盛り込み提案</span>${escapeHtml(r.suggestInclusion)}</p>
+          <p class="trend-rec-card__keywords text-muted">商品との接点：${r.matchedKeywords.map((k) => `<span class="tag tag--soft">${escapeHtml(k)}</span>`).join(" ")}</p>
+        </span>
+      </label>
+    </li>`;
+    })
+    .join("");
+
+  list.querySelectorAll(".trend-rec-card__check").forEach((cb) => {
+    cb.addEventListener("change", () => {
+      saveTrendSelections();
+      updateTrendSelectedCount();
+      cb.closest(".trend-rec-card")?.classList.toggle("is-selected", cb.checked);
+    });
+  });
+
+  updateTrendSelectedCount();
+}
+
+function saveTrendSelections() {
+  const checked = document.querySelectorAll(".trend-rec-card__check:checked");
+  currentSession.trendSelections = [...checked].map((el) => el.dataset.trendId);
+}
+
+function updateTrendSelectedCount() {
+  const countEl = document.getElementById("trend-selected-count");
+  if (!countEl) return;
+  const n = currentSession.trendSelections?.length || 0;
+  countEl.textContent = `${n}件を企画に盛り込み`;
+}
+
+function cloneTargeting(t) {
+  return {
+    mainTarget: t.mainTarget || "",
+    subTarget: t.subTarget || "",
+    interests: [...(t.interests || [])],
+    purchaseMotivation: [...(t.purchaseMotivation || [])],
+    keywords: [...(t.keywords || [])],
+    mediaCategories: [...(t.mediaCategories || [])],
+    timing: t.timing || "",
+    rationale: t.rationale || "",
+  };
+}
+
+function linesToArray(str) {
+  return String(str)
+    .split(/\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function arrayToLines(arr) {
+  return (arr || []).join("\n");
+}
+
+function stringToKeywords(str) {
+  return String(str)
+    .split(/[、,\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function keywordsToString(arr) {
+  return (arr || []).join("、");
+}
+
+function renderTargetingForm(targeting) {
+  const t = cloneTargeting(targeting);
+  const result = document.getElementById("targeting-result");
+  result.innerHTML = `
+    <form id="targeting-form" class="targeting-form">
+      <p class="targeting-form__hint">AI が整理した読者・媒体像です。広報担当者が内容を直接編集できます。</p>
+      <div class="form-grid">
+        <label class="full-width">
+          届けたい読者
+          <textarea name="mainTarget" rows="2" required>${escapeHtml(t.mainTarget)}</textarea>
+        </label>
+        <label class="full-width">
+          サブ読者
+          <textarea name="subTarget" rows="2">${escapeHtml(t.subTarget)}</textarea>
+        </label>
+        <label class="full-width">
+          関心テーマ
+          <span class="field-hint">1行に1項目</span>
+          <textarea name="interests" rows="4">${escapeHtml(arrayToLines(t.interests))}</textarea>
+        </label>
+        <label class="full-width">
+          購買動機
+          <span class="field-hint">1行に1項目</span>
+          <textarea name="purchaseMotivation" rows="3">${escapeHtml(arrayToLines(t.purchaseMotivation))}</textarea>
+        </label>
+        <label class="full-width">
+          訴求キーワード
+          <span class="field-hint">読点（、）または改行で区切り</span>
+          <input type="text" name="keywords" value="${escapeAttr(keywordsToString(t.keywords))}" />
+        </label>
+        <label class="full-width">
+          相性のいい媒体カテゴリ
+          <span class="field-hint">1行に1項目</span>
+          <textarea name="mediaCategories" rows="3">${escapeHtml(arrayToLines(t.mediaCategories))}</textarea>
+        </label>
+        <label class="full-width">
+          配信タイミング推奨
+          <input type="text" name="timing" value="${escapeAttr(t.timing)}" />
+        </label>
+        <label class="full-width rationale-field">
+          予測の根拠（メモ）
+          <textarea name="rationale" rows="4">${escapeHtml(t.rationale)}</textarea>
+        </label>
+      </div>
+    </form>`;
+  bindTargetingForm();
+}
+
+function readTargetingForm() {
+  const form = document.getElementById("targeting-form");
+  if (!form) return currentSession.targeting || cloneTargeting(MOCK_TARGETING);
+  return {
+    mainTarget: form.elements.mainTarget.value.trim(),
+    subTarget: form.elements.subTarget.value.trim(),
+    interests: linesToArray(form.elements.interests.value),
+    purchaseMotivation: linesToArray(form.elements.purchaseMotivation.value),
+    keywords: stringToKeywords(form.elements.keywords.value),
+    mediaCategories: linesToArray(form.elements.mediaCategories.value),
+    timing: form.elements.timing.value.trim(),
+    rationale: form.elements.rationale.value.trim(),
+  };
+}
+
+function saveTargetingFromForm() {
+  currentSession.targeting = readTargetingForm();
+  return currentSession.targeting;
+}
+
+function bindTargetingForm() {
+  const form = document.getElementById("targeting-form");
+  if (!form) return;
+  form.addEventListener("input", () => {
+    currentSession.targeting = readTargetingForm();
+  });
+  form.addEventListener("submit", (e) => e.preventDefault());
+}
+
+function renderAgentChatComplete() {
+  chatIndex = AGENT_MESSAGES.length;
+  const container = document.getElementById("chat-messages");
+  container.innerHTML = "";
+  AGENT_MESSAGES.forEach((msg) => appendBubble(container, msg));
+  document.getElementById("memo-preview").hidden = false;
+  document.getElementById("memo-preview").innerHTML = renderMemoPreviewShort();
+}
+
+function renderMemoPreviewShort() {
+  const m = MOCK_PLANNING_MEMO;
+  const trendN = getSelectedTrendRecommendations().length;
+  const trendNote =
+    trendN > 0
+      ? `<p class="memo-preview__trend text-muted">外部トレンド <strong>${trendN}件</strong> を盛り込み予定</p>`
+      : "";
+  return `
+    <h3 class="panel-title">PR企画メモ（プレビュー）</h3>
+    ${trendNote}
+    <p class="memo-preview__lead">切り口候補 <strong>${m.angles.length}案</strong> を整理済み</p>
+    <ol class="memo-preview__list">${m.angles.map((a) => `<li>${escapeHtml(a.title)}</li>`).join("")}</ol>`;
+}
 let currentStep = 1;
 let chatIndex = 0;
 let chatTimer = null;
 let currentSession = {
   product: null,
   targeting: null,
+  trendSelections: null,
   planningMemo: null,
 };
 let lastReviewResult = null;
+let suggestionsApplied = false;
 let selectedRecordId = null;
+
+function suggestionText(s) {
+  return typeof s === "string" ? s : s.text;
+}
+
+function applySuggestionPatches(draft, suggestions) {
+  let text = draft;
+  for (const s of suggestions) {
+    if (typeof s === "string" || !s.patch) continue;
+    const p = s.patch;
+    if (p.type === "insertAfter" && text.includes(p.find)) {
+      text = text.replace(p.find, p.find + p.insert);
+    } else if (p.type === "replace" && text.includes(p.find)) {
+      text = text.replace(p.find, p.replace);
+    } else if (p.type === "append") {
+      text = `${text.trimEnd()}\n\n${p.insert}`;
+    }
+  }
+  return text;
+}
+
+function renderDraftSuggestions(review) {
+  const panel = document.getElementById("draft-suggestions-panel");
+  const list = document.getElementById("draft-suggestions-list");
+  const feedback = document.getElementById("draft-suggestions-feedback");
+  const applyBtn = document.getElementById("apply-suggestions-btn");
+  if (!panel || !list) return;
+
+  const items = review?.suggestions || [];
+  if (items.length === 0) {
+    panel.hidden = true;
+    return;
+  }
+
+  list.innerHTML = items
+    .map(
+      (s, i) => `
+    <li class="draft-suggestion-item${suggestionsApplied ? " is-applied" : ""}">
+      <span class="draft-suggestion-item__num">${i + 1}</span>
+      <span class="draft-suggestion-item__text">${escapeHtml(suggestionText(s))}</span>
+    </li>`
+    )
+    .join("");
+
+  panel.hidden = false;
+  feedback.hidden = true;
+  if (applyBtn) {
+    applyBtn.disabled = suggestionsApplied;
+    applyBtn.textContent = suggestionsApplied ? "反映済み" : "提案を原稿に反映";
+  }
+}
+
+function applySuggestionsToDraft() {
+  const textarea = document.getElementById("draft-input");
+  const review = lastReviewResult || MOCK_REVIEW;
+  const current = textarea.value;
+  let revised = applySuggestionPatches(current, review.suggestions);
+  if (revised === current && current.trim() === SAMPLE_DRAFT.trim()) {
+    revised = REVISED_DRAFT;
+  } else if (revised === current) {
+    alert("提案を自動反映できませんでした。改善提案を参考に手動で修正してください。");
+    return;
+  }
+
+  textarea.value = revised;
+  suggestionsApplied = true;
+  renderDraftSuggestions(review);
+
+  const feedback = document.getElementById("draft-suggestions-feedback");
+  if (feedback) {
+    feedback.hidden = false;
+    feedback.textContent = `${review.suggestions.length}件の提案を原稿に反映しました`;
+    feedback.className = "draft-suggestions-feedback is-success";
+  }
+
+  textarea.focus();
+  textarea.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
 
 function setStep(step) {
   currentStep = step;
@@ -158,6 +729,14 @@ function setStep(step) {
     el.classList.toggle("is-active", s === step);
     el.classList.toggle("is-done", s < step);
   });
+  if (document.getElementById("view-create")?.classList.contains("is-active")) {
+    renderCreateKpi();
+    updateFlowProgress(step);
+  }
+  if (step === 2 && !document.getElementById("targeting-result")?.hidden) {
+    saveTargetingFromForm();
+    renderTargetingForm(currentSession.targeting || cloneTargeting(MOCK_TARGETING));
+  }
 }
 
 function fillProductForm() {
@@ -172,9 +751,19 @@ document.getElementById("product-form").addEventListener("submit", (e) => {
   e.preventDefault();
   currentSession.product = getProductFromForm();
   currentSession.targeting = null;
+  currentSession.trendSelections = null;
   currentSession.planningMemo = null;
+  chatIndex = 0;
   setStep(2);
   runTargetingMock();
+  renderCreateKpi();
+});
+
+document.getElementById("demo-run-create-btn")?.addEventListener("click", () => {
+  fillProductForm();
+  currentSession.product = getProductFromForm();
+  chatIndex = 0;
+  runCreateDemoFlow(true);
 });
 
 function getProductFromForm() {
@@ -199,74 +788,44 @@ function runTargetingMock() {
   setTimeout(() => {
     loading.hidden = true;
     result.hidden = false;
-    currentSession.targeting = MOCK_TARGETING;
-    result.innerHTML = renderTargeting(MOCK_TARGETING);
-
-    document.getElementById("ref-patterns").innerHTML = PR_PATTERNS.filter((p) =>
-      ["numeric", "limited"].includes(p.id)
-    )
-      .map((p) => `<li><strong>${escapeHtml(p.label)}</strong> — ${escapeHtml(p.description)}</li>`)
-      .join("");
-  }, 1400);
-}
-
-function renderTargeting(t) {
-  return `
-    <div class="targeting-grid">
-      <div class="target-card">
-        <h4>メインターゲット</h4>
-        <p>${escapeHtml(t.mainTarget)}</p>
-      </div>
-      <div class="target-card">
-        <h4>サブターゲット</h4>
-        <p>${escapeHtml(t.subTarget)}</p>
-      </div>
-      <div class="target-card">
-        <h4>関心テーマ</h4>
-        <ul>${t.interests.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>
-      </div>
-      <div class="target-card">
-        <h4>購買動機</h4>
-        <ul>${t.purchaseMotivation.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>
-      </div>
-      <div class="target-card">
-        <h4>訴求キーワード</h4>
-        <p>${escapeHtml(t.keywords.join(" · "))}</p>
-      </div>
-      <div class="target-card">
-        <h4>相性のいい媒体カテゴリ</h4>
-        <ul>${t.mediaCategories.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>
-      </div>
-      <div class="target-card">
-        <h4>配信タイミング推奨</h4>
-        <p>${escapeHtml(t.timing)}</p>
-      </div>
-      <div class="rationale-box">
-        <h4>予測の根拠</h4>
-        <p>${escapeHtml(t.rationale)}</p>
-      </div>
-    </div>`;
+    document.getElementById("targeting-save-note").hidden = false;
+    currentSession.targeting = cloneTargeting(MOCK_TARGETING);
+    renderTargetingForm(currentSession.targeting);
+    populateTargetingSidebar();
+    renderCreateKpi();
+  }, MOCK_DELAY);
 }
 
 document.querySelectorAll("[data-next]").forEach((btn) => {
   btn.addEventListener("click", () => {
     const step = Number(btn.dataset.next);
+    if (currentStep === 2) saveTargetingFromForm();
+    if (currentStep === 3) saveTrendSelections();
     setStep(step);
-    if (step === 3) startAgentChat();
+    renderCreateKpi();
+    if (step === 3) runTrendMock();
+    if (step === 4) startAgentChat();
   });
 });
 
 document.querySelectorAll("[data-back]").forEach((btn) => {
-  btn.addEventListener("click", () => setStep(Number(btn.dataset.back)));
+  btn.addEventListener("click", () => {
+    if (currentStep === 2) saveTargetingFromForm();
+    setStep(Number(btn.dataset.back));
+    renderCreateKpi();
+  });
 });
 
 document.querySelectorAll(".stepper-item").forEach((btn) => {
   btn.addEventListener("click", () => {
     const step = Number(btn.dataset.step);
+    if (currentStep === 2 && step !== 2) saveTargetingFromForm();
+    if (currentStep === 3 && step !== 3) saveTrendSelections();
     if (step <= currentStep || step === 1) {
       setStep(step);
-      if (step === 3 && chatIndex === 0) startAgentChat();
-      if (step === 4) renderPlanningMemo();
+      if (step === 3 && document.getElementById("trend-result")?.hidden) runTrendMock();
+      if (step === 4 && chatIndex === 0) startAgentChat();
+      if (step === 5) renderPlanningMemo();
     }
   });
 });
@@ -291,9 +850,7 @@ function playNextMessage(container) {
       playNextMessage(container);
     } else {
       document.getElementById("memo-preview").hidden = false;
-      document.getElementById("memo-preview").innerHTML = `
-        <h3 class="panel-title">PR企画メモ（プレビュー）</h3>
-        <p>切り口候補 ${MOCK_PLANNING_MEMO.angles.length}案を整理しました。「企画メモを表示」で詳細を確認できます。</p>`;
+      document.getElementById("memo-preview").innerHTML = renderMemoPreviewShort();
     }
   }, delay);
 }
@@ -323,13 +880,31 @@ document.getElementById("chat-form").addEventListener("submit", (e) => {
 });
 
 document.getElementById("show-memo-btn").addEventListener("click", () => {
+  saveTrendSelections();
   renderPlanningMemo();
-  setStep(4);
+  setStep(5);
 });
 
 function renderPlanningMemo() {
   currentSession.planningMemo = MOCK_PLANNING_MEMO;
   const m = MOCK_PLANNING_MEMO;
+  const trends = getSelectedTrendRecommendations();
+  const trendSection =
+    trends.length > 0
+      ? `
+    <div class="memo-section">
+      <h4>外部トレンドから盛り込む要素</h4>
+      <ul class="memo-list trend-memo-list">
+        ${trends
+          .map(
+            (t) =>
+              `<li><strong>${escapeHtml(t.categoryLabel)}</strong> — ${escapeHtml(t.suggestInclusion)}</li>`
+          )
+          .join("")}
+      </ul>
+    </div>`
+      : "";
+
   document.getElementById("planning-memo").innerHTML = `
     <h3 class="panel-title">PR企画メモ</h3>
 
@@ -346,6 +921,8 @@ function renderPlanningMemo() {
         )
         .join("")}
     </div>
+
+    ${trendSection}
 
     <div class="memo-section">
       <h4>入れるべき事実情報</h4>
@@ -371,6 +948,12 @@ document.querySelector("[data-goto-review]")?.addEventListener("click", () => {
 /* ── Review ── */
 document.getElementById("load-sample-draft").addEventListener("click", () => {
   document.getElementById("draft-input").value = SAMPLE_DRAFT;
+  suggestionsApplied = false;
+  document.getElementById("draft-suggestions-panel").hidden = true;
+});
+
+document.getElementById("apply-suggestions-btn")?.addEventListener("click", () => {
+  applySuggestionsToDraft();
 });
 
 document.getElementById("run-review-btn").addEventListener("click", () => {
@@ -382,7 +965,7 @@ document.getElementById("run-review-btn").addEventListener("click", () => {
   runReviewMock();
 });
 
-function runReviewMock() {
+function runReviewMock(silent = false) {
   const panel = document.getElementById("review-result-panel");
   const loading = document.getElementById("review-loading");
   const result = document.getElementById("review-result");
@@ -391,6 +974,8 @@ function runReviewMock() {
   loading.hidden = false;
   result.innerHTML = "";
   savePanel.hidden = true;
+  suggestionsApplied = false;
+  document.getElementById("draft-suggestions-panel").hidden = true;
 
   setTimeout(() => {
     loading.hidden = true;
@@ -399,8 +984,16 @@ function runReviewMock() {
       reviewedAt: new Date().toISOString(),
     };
     result.innerHTML = renderReview(lastReviewResult);
+    renderDraftSuggestions(lastReviewResult);
     showSavePanel();
-  }, 1600);
+    renderKpi("review-kpi", [
+      { value: "エクセル", label: "ブランド" },
+      { value: `${MOCK_REVIEW.overall}/5`, label: "総合スコア", highlight: true },
+      { value: `${MOCK_REVIEW.suggestions.length}件`, label: "改善提案" },
+      { value: "チェック済", label: "状態" },
+    ]);
+    if (!silent) reviewBootstrapped = true;
+  }, MOCK_DELAY);
 }
 
 function showSavePanel() {
@@ -410,6 +1003,12 @@ function showSavePanel() {
   const titleField = form.elements.title;
   if (!titleField.value) {
     titleField.value = draft.split("\n")[0].slice(0, 80);
+  }
+  if (!form.elements.scheduledDate.value) {
+    form.elements.scheduledDate.value = "2026-07-15";
+  }
+  if (!form.elements.memo.value) {
+    form.elements.memo.value = "旧品比220%の数値訴求を活かす。夏コスメ特集向けに@cosme・MAQUIAへ配信予定。";
   }
   savePanel.hidden = false;
   document.getElementById("save-feedback").hidden = true;
@@ -445,7 +1044,8 @@ function renderReview(r) {
 
     <div class="suggestions-box">
       <h4>改善提案</h4>
-      <ol>${r.suggestions.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ol>
+      <ol>${r.suggestions.map((s) => `<li>${escapeHtml(suggestionText(s))}</li>`).join("")}</ol>
+      <p class="text-muted suggestions-box__note">左の原稿入力欄の下から「提案を原稿に反映」できます。</p>
     </div>`;
 }
 
@@ -517,17 +1117,24 @@ document.getElementById("save-pr-form").addEventListener("submit", (e) => {
 });
 
 /* ── Saved PR list ── */
-function renderSavedList(openId = null) {
+function renderSavedList(openId = null, autoOpenFirst = false) {
   const filter = document.getElementById("saved-filter-status").value;
   const records = listRecords(filter ? { status: filter } : {});
   const tbody = document.getElementById("saved-table-body");
   const empty = document.getElementById("saved-empty");
   const stats = getStorageStats();
+  const totalViews = records.reduce((s, r) => s + (getRecordPrtimesViews(r) || 0), 0);
+
+  renderKpi("saved-kpi", [
+    { value: `${stats.total}件`, label: "登録PR", highlight: true },
+    { value: `${stats.byStatus.published || 0}件`, label: "掲載済" },
+    { value: `${stats.byStatus.reviewed || 0}件`, label: "チェック済" },
+    { value: totalViews ? totalViews.toLocaleString() : "—", label: "PR TIMES view 合計" },
+  ]);
 
   document.getElementById("saved-stats").textContent = [
     `全 ${stats.total} 件`,
     ...Object.entries(stats.byStatus).map(([k, n]) => `${PR_STATUS_LABELS[k] || k} ${n}件`),
-    `RAGインデックス済 ${stats.ragReady} 件`,
   ].join("　");
 
   if (records.length === 0) {
@@ -541,7 +1148,7 @@ function renderSavedList(openId = null) {
   tbody.innerHTML = records
     .map((r) => {
       const mediaCount = r.distribution?.media?.length || 0;
-      const imp = r.performance?.estimatedImp;
+      const views = getRecordPrtimesViews(r);
       return `
       <tr data-id="${r.id}" class="saved-row">
         <td>${formatDate(r.updatedAt)}</td>
@@ -550,7 +1157,7 @@ function renderSavedList(openId = null) {
         <td>${statusBadge(r.status)}</td>
         <td>${distBadge(r.distribution?.status)}</td>
         <td>${mediaCount}</td>
-        <td>${imp != null ? imp.toLocaleString() : "—"}</td>
+        <td>${views != null ? views.toLocaleString() : "—"}</td>
         <td>${r.review?.overall != null ? `${r.review.overall}/5` : "—"}</td>
         <td><button type="button" class="btn-link" data-open="${r.id}">詳細</button></td>
       </tr>`;
@@ -569,10 +1176,11 @@ function renderSavedList(openId = null) {
   });
 
   if (openId) openDetail(openId);
+  else if (autoOpenFirst && records.length > 0) openDetail(records[0].id);
 }
 
 function statusBadge(status) {
-  return `<span class="status-badge">${PR_STATUS_LABELS[status] || status}</span>`;
+  return `<span class="status-badge status-badge--${status}">${PR_STATUS_LABELS[status] || status}</span>`;
 }
 
 function distBadge(status) {
@@ -611,6 +1219,9 @@ function openDetail(id) {
   selectedRecordId = id;
   const record = getRecord(id);
   if (!record) return;
+  document.querySelectorAll(".saved-row").forEach((r) => {
+    r.classList.toggle("is-selected", r.dataset.id === id);
+  });
   const panel = document.getElementById("saved-detail-panel");
   panel.hidden = false;
   panel.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -661,8 +1272,8 @@ function renderDetailForm(record) {
       <h4>効果・成果</h4>
       <div class="form-grid">
         <label>
-          推定IMP（合計）
-          <input type="number" name="estimatedImp" value="${record.performance?.estimatedImp ?? ""}" min="0" />
+          PR TIMES view（合計）
+          <input type="number" name="prtimesViews" value="${getRecordPrtimesViews(record) ?? ""}" min="0" />
         </label>
         <label>
           SNS反響数
@@ -681,24 +1292,28 @@ function renderDetailForm(record) {
 
     <div class="detail-section">
       <h4>メモ・タグ</h4>
-      <label class="full-width">
-        運用メモ
-        <textarea name="memo" rows="3"></textarea>
-      </label>
-      <label class="full-width">
-        タグ（カンマ区切り）
-        <input type="text" name="tags" value="${escapeAttr((record.tags || []).join(", "))}" />
-      </label>
+      <div class="form-grid">
+        <label class="full-width">
+          運用メモ
+          <textarea name="memo" rows="4"></textarea>
+        </label>
+        <label class="full-width">
+          タグ（カンマ区切り）
+          <input type="text" name="tags" value="${escapeAttr((record.tags || []).join(", "))}" />
+        </label>
+      </div>
     </div>
 
-    <div class="detail-section rag-preview">
-      <h4>RAG用テキスト（自動生成）</h4>
-      <p class="text-muted">Phase 3 で pgvector へインデックスする際のチャンク原文プレビュー</p>
-      <pre class="rag-chunk">${escapeHtml(record.ragMeta?.chunkText || "")}</pre>
-      <label class="rag-ready-label">
-        <input type="checkbox" name="embeddingReady" ${record.ragMeta?.embeddingReady ? "checked" : ""} />
-        RAGインデックス済みとしてマーク
-      </label>
+    <div class="detail-section detail-section--admin">
+      <details>
+        <summary>システム情報（管理者向け）</summary>
+        <h4>検索用テキスト（自動生成）</h4>
+        <pre class="rag-chunk">${escapeHtml(record.ragMeta?.chunkText || "")}</pre>
+        <label class="rag-ready-label">
+          <input type="checkbox" name="embeddingReady" ${record.ragMeta?.embeddingReady ? "checked" : ""} />
+          検索インデックス済みとしてマーク
+        </label>
+      </details>
     </div>
 
     <div class="form-actions">
@@ -762,12 +1377,12 @@ function renderMediaRow(m) {
           <input type="date" class="media-published" value="${m.publishedAt || ""}" />
         </label>
         <label>
-          推定IMP
-          <input type="number" class="media-imp" value="${m.estimatedImp ?? ""}" min="0" />
+          PR TIMES view
+          <input type="number" class="media-prtimes-views" value="${getMediaPrtimesViews(m) ?? ""}" min="0" />
         </label>
         <label class="full-width">
           媒体メモ
-          <input type="text" class="media-notes" value="${escapeAttr(m.notes)}" />
+          <textarea class="media-notes" rows="2">${escapeHtml(m.notes)}</textarea>
         </label>
       </div>
       <button type="button" class="btn-link btn-link--danger media-remove">この媒体を削除</button>
@@ -793,7 +1408,7 @@ function saveDetailForm(id) {
       status: row.querySelector(".media-status")?.value || DISTRIBUTION_STATUS.NOT_SENT,
       publishedUrl: row.querySelector(".media-url")?.value || "",
       publishedAt: row.querySelector(".media-published")?.value || "",
-      estimatedImp: numOrNull(row.querySelector(".media-imp")?.value),
+      prtimesViews: numOrNull(row.querySelector(".media-prtimes-views")?.value),
       notes: row.querySelector(".media-notes")?.value || "",
     });
   });
@@ -812,7 +1427,7 @@ function saveDetailForm(id) {
       media,
     },
     performance: {
-      estimatedImp: numOrNull(form.elements.estimatedImp.value),
+      prtimesViews: numOrNull(form.elements.prtimesViews.value),
       snsMentions: numOrNull(form.elements.snsMentions.value),
       reprints: numOrNull(form.elements.reprints.value),
       adEquivalent: numOrNull(form.elements.adEquivalent.value),
@@ -864,9 +1479,10 @@ function formatMarkdown(text) {
 /* ── Init ── */
 seedIfEmpty(SEED_SAVED_PRS);
 populateStatusSelects();
-renderDashboard();
-renderAssets();
+populateProductPresets();
+renderGuide();
 fillProductForm();
 currentSession.product = { ...SAMPLE_PRODUCT };
-
 document.getElementById("draft-input").value = SAMPLE_DRAFT;
+renderReviewMeta();
+bootstrapCreateView();

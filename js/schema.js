@@ -67,7 +67,7 @@ export function createEmptyMediaEntry() {
     status: DISTRIBUTION_STATUS.NOT_SENT,
     publishedUrl: "",
     publishedAt: "",
-    estimatedImp: null,
+    prtimesViews: null,
     notes: "",
   };
 }
@@ -83,8 +83,8 @@ export function buildRagChunkText(record) {
     record.targeting?.mainTarget && `ターゲット: ${record.targeting.mainTarget}`,
     record.targeting?.keywords?.length &&
       `キーワード: ${record.targeting.keywords.join(", ")}`,
-    record.performance?.estimatedImp != null &&
-      `推定IMP: ${record.performance.estimatedImp}`,
+    record.performance?.prtimesViews != null &&
+      `PR TIMES view: ${record.performance.prtimesViews}`,
     record.memo && `メモ: ${record.memo}`,
   ].filter(Boolean);
   return parts.join("\n\n");
@@ -111,7 +111,7 @@ export function createPrRecord(partial = {}) {
       media: [],
     },
     performance: partial.performance || {
-      estimatedImp: null,
+      prtimesViews: null,
       snsMentions: null,
       reprints: null,
       adEquivalent: null,

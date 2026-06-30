@@ -7,12 +7,29 @@ import {
 
 const STORAGE_KEY = "noevia_pr_ax_records_v1";
 
+function normalizeRecord(record) {
+  const perf = record.performance || {};
+  const performance = {
+    ...perf,
+    prtimesViews: perf.prtimesViews ?? perf.estimatedImp ?? null,
+  };
+  const media = (record.distribution?.media || []).map((m) => ({
+    ...m,
+    prtimesViews: m.prtimesViews ?? m.estimatedImp ?? null,
+  }));
+  return {
+    ...record,
+    performance,
+    distribution: record.distribution ? { ...record.distribution, media } : record.distribution,
+  };
+}
+
 function readAll() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed.records) ? parsed.records : [];
+    return Array.isArray(parsed.records) ? parsed.records.map(normalizeRecord) : [];
   } catch {
     return [];
   }

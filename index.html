@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PR AX デモ｜ノエビア（PoC Phase 1）</title>
+    <title>プレスリリース作成支援｜ノエビア PoC デモ</title>
     <meta
       name="description"
       content="プレスリリースAX化 PoC デモ — 配信済みPR型化・ターゲティング予測・PR整理エージェント・AIレビュー"
@@ -14,24 +14,40 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css?v=1.4" />
   </head>
   <body>
+    <script>
+      (function () {
+        if (location.protocol !== "file:") return;
+        document.addEventListener("DOMContentLoaded", function () {
+          var w = document.createElement("div");
+          w.className = "protocol-warning";
+          w.setAttribute("role", "alert");
+          w.innerHTML =
+            "<strong>⚠ このファイルは直接開けません</strong>" +
+            "<p>Finder から index.html を開くと JavaScript が読み込めず、画面が更新されません。</p>" +
+            "<p>ターミナルで <code>cd demo && ./serve.sh</code> を実行し、" +
+            '<a href="http://localhost:8080/">http://localhost:8080/</a> を開いてください。</p>';
+          document.body.insertBefore(w, document.body.firstChild);
+        });
+      })();
+    </script>
     <a class="skip-link" href="#main">メインコンテンツへ</a>
 
     <header class="site-header">
       <div class="header-top">
-        <p class="header-group">ノエビアグループ向け PoC</p>
-        <p class="header-note">デモ環境（AI応答はモック）</p>
+        <p class="header-group">ノエビアグループ向け PoC — UX確認用デモ</p>
+        <p class="header-note">AI応答はサンプルです<span class="demo-version">v1.5</span></p>
       </div>
       <div class="header-inner">
-        <p class="site-title"><a href="#" data-view-link="dashboard">プレスリリース支援</a></p>
+        <p class="site-title"><a href="#" data-view-link="create">プレスリリース作成支援</a></p>
         <nav class="main-nav" aria-label="メインナビゲーション">
-          <button type="button" class="nav-btn is-active" data-view="dashboard">概要</button>
-          <button type="button" class="nav-btn" data-view="assets">PR資産・型化</button>
-          <button type="button" class="nav-btn" data-view="create">新規PR作成</button>
-          <button type="button" class="nav-btn" data-view="review">AIレビュー</button>
-          <button type="button" class="nav-btn" data-view="saved">保存PRリスト</button>
+          <button type="button" class="nav-btn nav-btn--primary is-active" data-view="create">PR作成</button>
+          <button type="button" class="nav-btn" data-view="review">原稿チェック</button>
+          <button type="button" class="nav-btn" data-view="saved">PR一覧</button>
+          <button type="button" class="nav-btn" data-view="assets">過去PR参考</button>
+          <button type="button" class="nav-btn" data-view="guide">使い方</button>
         </nav>
         <button type="button" class="menu-toggle" aria-label="メニューを開く" aria-expanded="false">
           <span></span><span></span><span></span>
@@ -40,23 +56,29 @@
     </header>
 
     <main id="main" class="main-content">
-      <!-- Dashboard -->
-      <section id="view-dashboard" class="view is-active" aria-labelledby="dashboard-heading">
+      <!-- Guide (was Dashboard) -->
+      <section id="view-guide" class="view" aria-labelledby="guide-heading" hidden>
         <nav class="breadcrumb" aria-label="パンくず">
-          <span>HOME</span><span class="breadcrumb__sep">&gt;</span><span>概要</span>
+          <span>HOME</span><span class="breadcrumb__sep">&gt;</span><span>使い方</span>
         </nav>
         <div class="page-header">
-          <h1 id="dashboard-heading">概要</h1>
-          <p>Phase 1 PoC の業務フロー。配信済みPRの型化からレビュー・保存までを確認できます。</p>
+          <h1 id="guide-heading">使い方ガイド</h1>
+          <p>このデモでは、商品情報からPR企画メモ・原稿チェックまでの流れを体験できます。まずは「PR作成」からお試しください。</p>
         </div>
 
-        <ol class="workflow-list">
+        <div class="guide-hero panel">
+          <h2 class="guide-hero__title">サンプル商品でPR作成を体験</h2>
+          <p class="guide-hero__desc">エクセル「スキニーリッチシャドウ N」の新色PRを題材に、約1分で全ステップを確認できます。</p>
+          <button type="button" class="btn btn-primary btn-lg" data-goto="create" data-start-demo="true">体験デモを開始</button>
+        </div>
+
+        <ol class="workflow-list workflow-list--guide">
           <li class="workflow-list__item">
-            <button type="button" class="workflow-list__link" data-goto="assets">
+            <button type="button" class="workflow-list__link" data-goto="create">
               <span class="workflow-list__num">1</span>
               <span class="workflow-list__body">
-                <span class="workflow-list__title">配信済みPRの型化</span>
-                <span class="workflow-list__desc">エクセルブランドのタイトル型・訴求軸を確認</span>
+                <span class="workflow-list__title">商品情報を入力</span>
+                <span class="workflow-list__desc">商品名・発売区分・特徴を入力（サンプル入力済み）</span>
               </span>
             </button>
           </li>
@@ -64,8 +86,8 @@
             <button type="button" class="workflow-list__link" data-goto="create">
               <span class="workflow-list__num">2</span>
               <span class="workflow-list__body">
-                <span class="workflow-list__title">ターゲティング予測</span>
-                <span class="workflow-list__desc">商品情報からターゲット像・訴求キーワードを整理</span>
+                <span class="workflow-list__title">読者・媒体像を整理</span>
+                <span class="workflow-list__desc">過去PRの型を参考に、誰に届けるかを整理</span>
               </span>
             </button>
           </li>
@@ -73,17 +95,26 @@
             <button type="button" class="workflow-list__link" data-goto="create">
               <span class="workflow-list__num">3</span>
               <span class="workflow-list__body">
-                <span class="workflow-list__title">PR整理エージェント</span>
-                <span class="workflow-list__desc">対話形式で切り口・見出し案・企画メモを整理</span>
+                <span class="workflow-list__title">外部トレンドを確認</span>
+                <span class="workflow-list__desc">SNS・TV・Webの動向から盛り込む要素をレコメンド</span>
+              </span>
+            </button>
+          </li>
+          <li class="workflow-list__item">
+            <button type="button" class="workflow-list__link" data-goto="create">
+              <span class="workflow-list__num">4</span>
+              <span class="workflow-list__body">
+                <span class="workflow-list__title">切り口・見出し案を整理</span>
+                <span class="workflow-list__desc">AIと対話しながら企画メモを作成</span>
               </span>
             </button>
           </li>
           <li class="workflow-list__item">
             <button type="button" class="workflow-list__link" data-goto="review">
-              <span class="workflow-list__num">4</span>
+              <span class="workflow-list__num">5</span>
               <span class="workflow-list__body">
-                <span class="workflow-list__title">配信前AIレビュー</span>
-                <span class="workflow-list__desc">原稿をブランドトーン・法令観点で確認</span>
+                <span class="workflow-list__title">原稿をチェック</span>
+                <span class="workflow-list__desc">ブランドトーン・表現リスクを確認して保存</span>
               </span>
             </button>
           </li>
@@ -102,16 +133,15 @@
             <ul class="news-list" id="dash-pr-list"></ul>
           </div>
           <div class="panel panel--secondary">
-            <h2 class="panel-title">Phase 1 スコープ</h2>
+            <h2 class="panel-title">UX確認のポイント</h2>
             <ul class="scope-list">
-              <li class="is-in">配信済みPR型化</li>
-              <li class="is-in">ターゲティング予測</li>
-              <li class="is-in">PR整理エージェント</li>
-              <li class="is-in">配信前AIレビュー</li>
-              <li class="is-in">保存PRリスト（DB/RAG準備）</li>
+              <li class="is-in">入力項目は足りますか？</li>
+              <li class="is-in">外部トレンドの提案は役立ちますか？</li>
+              <li class="is-in">切り口整理の流れは自然ですか？</li>
+              <li class="is-in">企画メモはそのまま使えそうですか？</li>
+              <li class="is-in">原稿チェックの指摘は役立ちますか？</li>
               <li class="is-out">類似PR検索（Phase 2）</li>
               <li class="is-out">メディア管理（Phase 2）</li>
-              <li class="is-out">自動配信（Phase 3）</li>
             </ul>
           </div>
         </div>
@@ -120,15 +150,16 @@
       <!-- Assets -->
       <section id="view-assets" class="view" aria-labelledby="assets-heading" hidden>
         <nav class="breadcrumb" aria-label="パンくず">
-          <span>HOME</span><span class="breadcrumb__sep">&gt;</span><span>PR資産・型化</span>
+          <span>HOME</span><span class="breadcrumb__sep">&gt;</span><span>過去PR参考</span>
         </nav>
         <div class="page-header">
-          <h1 id="assets-heading">PR資産・型化</h1>
+          <h1 id="assets-heading">過去PR参考</h1>
           <p>
-            配信済みプレスリリースを分析し、ブランド別の「勝ちパターン」を整理します。
-            <span class="text-muted">（データ出典：常盤薬品工業 ニュース一覧）</span>
+            配信済みプレスリリースから、反応のよかったタイトルの型・訴求の傾向を確認できます。PR作成時にAIがここを参照します。
           </p>
         </div>
+
+        <div class="kpi-row" id="assets-kpi"></div>
 
         <div class="filter-bar">
           <label>
@@ -161,12 +192,17 @@
                   <th>カテゴリ</th>
                   <th>タイトル</th>
                   <th>型</th>
-                  <th>推定IMP</th>
+                  <th>PR TIMES view</th>
                 </tr>
               </thead>
               <tbody id="pr-table-body"></tbody>
             </table>
           </div>
+        </div>
+
+        <div class="panel panel--detail" id="pr-detail-panel" hidden>
+          <h3 class="panel-title">PR詳細（サンプル）</h3>
+          <div id="pr-detail-content"></div>
         </div>
 
         <div class="panel">
@@ -185,26 +221,55 @@
       </section>
 
       <!-- Create PR -->
-      <section id="view-create" class="view" aria-labelledby="create-heading" hidden>
+      <section id="view-create" class="view is-active" aria-labelledby="create-heading">
         <nav class="breadcrumb" aria-label="パンくず">
-          <span>HOME</span><span class="breadcrumb__sep">&gt;</span><span>新規PR作成</span>
+          <span>HOME</span><span class="breadcrumb__sep">&gt;</span><span>PR作成</span>
         </nav>
         <div class="page-header">
-          <h1 id="create-heading">新規PR作成</h1>
-          <p>商品情報入力 → ターゲティング予測 → PR整理エージェント → 企画メモ出力</p>
+          <h1 id="create-heading">PR作成</h1>
+          <p>商品情報を入力すると、過去PRと外部トレンドを参考にしながら切り口・見出し案・企画メモまで整理できます。</p>
         </div>
 
+        <div class="ux-guide-banner" role="note">
+          <p><strong>UX確認用デモ</strong> — サンプル商品が入力済みです。「体験デモを開始」で全ステップを約1分で確認できます。各ステップは自分のペースで進めてもOKです。</p>
+        </div>
+
+        <div class="flow-progress" id="flow-progress" aria-label="PR作成の流れ">
+          <span class="flow-progress__item is-active" data-flow-step="1">① 商品情報</span>
+          <span class="flow-progress__sep" aria-hidden="true">→</span>
+          <span class="flow-progress__item" data-flow-step="2">② 読者・媒体</span>
+          <span class="flow-progress__sep" aria-hidden="true">→</span>
+          <span class="flow-progress__item" data-flow-step="3">③ 外部トレンド</span>
+          <span class="flow-progress__sep" aria-hidden="true">→</span>
+          <span class="flow-progress__item" data-flow-step="4">④ 切り口整理</span>
+          <span class="flow-progress__sep" aria-hidden="true">→</span>
+          <span class="flow-progress__item" data-flow-step="5">⑤ 企画メモ</span>
+          <span class="flow-progress__sep" aria-hidden="true">→</span>
+          <span class="flow-progress__item" data-flow-step="6">⑥ 原稿チェック</span>
+        </div>
+
+        <div class="kpi-row" id="create-kpi"></div>
+
         <div class="stepper" id="create-stepper">
-          <button type="button" class="stepper-item is-active" data-step="1">1. 商品情報</button>
-          <button type="button" class="stepper-item" data-step="2">2. ターゲティング</button>
-          <button type="button" class="stepper-item" data-step="3">3. PR整理</button>
-          <button type="button" class="stepper-item" data-step="4">4. 企画メモ</button>
+          <button type="button" class="stepper-item is-active" data-step="1">① 商品情報</button>
+          <button type="button" class="stepper-item" data-step="2">② 読者・媒体</button>
+          <button type="button" class="stepper-item" data-step="3">③ 外部トレンド</button>
+          <button type="button" class="stepper-item" data-step="4">④ 切り口整理</button>
+          <button type="button" class="stepper-item" data-step="5">⑤ 企画メモ</button>
         </div>
 
         <!-- Step 1 -->
         <div class="create-step is-active" data-step="1">
           <form class="product-form panel" id="product-form">
-            <h3 class="panel-title">商品情報を入力</h3>
+            <div class="scenario-banner">
+              <p class="scenario-banner__label">今回の題材</p>
+              <p class="scenario-banner__text" id="scenario-text">エクセル「スキニーリッチシャドウ N」透明感モーヴカラー新色のPRを作成します。</p>
+            </div>
+            <h3 class="panel-title">商品情報</h3>
+            <label class="full-width preset-label">
+              サンプル商品（切替可）
+              <select id="product-preset" name="preset"></select>
+            </label>
             <div class="form-grid">
               <label>
                 商品名
@@ -241,7 +306,8 @@
               </label>
             </div>
             <div class="form-actions">
-              <button type="submit" class="btn btn-primary">ターゲティング予測へ</button>
+              <button type="button" class="btn btn-primary btn-lg" id="demo-run-create-btn">体験デモを開始（全ステップ）</button>
+              <button type="submit" class="btn btn-secondary">1ステップずつ進む</button>
             </div>
           </form>
         </div>
@@ -251,36 +317,69 @@
           <div class="targeting-layout">
             <div class="panel">
               <div class="panel-header-row">
-                <h2 class="panel-title">ターゲティング予測</h2>
+                <h2 class="panel-title">読者・媒体像の整理</h2>
               </div>
               <div class="loading-state" id="targeting-loading">
                 <div class="spinner" aria-hidden="true"></div>
-                <p>配信済みPRの型と商品情報を分析中…</p>
+                <p>過去PRと商品情報から、届けたい読者像を整理中…</p>
               </div>
               <div class="targeting-result" id="targeting-result" hidden></div>
+              <p class="targeting-form__note text-muted" id="targeting-save-note" hidden>編集内容は自動で保存されます</p>
             </div>
             <aside class="panel panel--secondary">
-              <h3 class="panel-title">参照した型</h3>
-              <p class="text-muted">エクセル過去PRから、実績数値型・新色追加型の反応が高い傾向を検出しました。</p>
+              <h3 class="panel-title">参考にした過去PRの型</h3>
+              <p class="text-muted">エクセルでは実績数値型・新色追加型の反応が高い傾向です。</p>
               <ul class="ref-patterns" id="ref-patterns"></ul>
+              <h4 class="sub-title">配信候補の媒体（参考）</h4>
+              <ul class="media-suggest-list" id="media-suggest-list"></ul>
             </aside>
           </div>
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" data-back="1">戻る</button>
-            <button type="button" class="btn btn-primary" data-next="3">PR整理エージェントへ</button>
+            <button type="button" class="btn btn-primary" data-next="3">外部トレンドを確認</button>
           </div>
         </div>
 
-        <!-- Step 3 -->
+        <!-- Step 3: External trends -->
         <div class="create-step" data-step="3" hidden>
+          <div class="trend-layout">
+            <div class="panel">
+              <div class="panel-header-row">
+                <h2 class="panel-title">外部トレンド・盛り込み提案</h2>
+                <span class="trend-selected-count" id="trend-selected-count"></span>
+              </div>
+              <p class="text-muted trend-meta" id="trend-meta"></p>
+              <div class="loading-state" id="trend-loading">
+                <div class="spinner" aria-hidden="true"></div>
+                <p>SNS・TV・Webメディア・競合PRからトレンド情報を収集中…</p>
+              </div>
+              <div class="trend-result" id="trend-result" hidden>
+                <p class="trend-summary" id="trend-summary"></p>
+                <ul class="trend-rec-list" id="trend-rec-list"></ul>
+              </div>
+            </div>
+            <aside class="panel panel--secondary">
+              <h3 class="panel-title">情報源（デモ）</h3>
+              <ul class="trend-sources-list" id="trend-sources-list"></ul>
+              <p class="text-muted trend-phase-note">Phase 4で本格連携予定。PoCではサンプルデータで、原稿作成前のインプット体験を確認できます。</p>
+            </aside>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" data-back="2">戻る</button>
+            <button type="button" class="btn btn-primary" data-next="4">切り口整理へ</button>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="create-step" data-step="4" hidden>
           <div class="agent-layout">
             <div class="panel chat-panel">
               <div class="panel-header-row">
-                <h2 class="panel-title">PR整理エージェント</h2>
+                <h2 class="panel-title">切り口・見出し案の整理</h2>
               </div>
               <div class="chat-messages" id="chat-messages" aria-live="polite"></div>
               <form class="chat-input-row" id="chat-form">
-                <input type="text" placeholder="メッセージを入力（デモでは固定応答）" aria-label="メッセージ" />
+                <input type="text" placeholder="質問や修正指示を入力（デモではサンプル応答）" aria-label="メッセージ" />
                 <button type="submit" class="btn btn-primary">送信</button>
               </form>
             </div>
@@ -290,17 +389,17 @@
             </aside>
           </div>
           <div class="form-actions">
-            <button type="button" class="btn btn-secondary" data-back="2">戻る</button>
+            <button type="button" class="btn btn-secondary" data-back="3">戻る</button>
             <button type="button" class="btn btn-primary" id="show-memo-btn">企画メモを表示</button>
           </div>
         </div>
 
-        <!-- Step 4 -->
-        <div class="create-step" data-step="4" hidden>
+        <!-- Step 5 -->
+        <div class="create-step" data-step="5" hidden>
           <div class="panel" id="planning-memo"></div>
           <div class="form-actions">
-            <button type="button" class="btn btn-secondary" data-back="3">戻る</button>
-            <button type="button" class="btn btn-primary" data-goto-review="review">原稿をAIレビューへ</button>
+            <button type="button" class="btn btn-secondary" data-back="4">戻る</button>
+            <button type="button" class="btn btn-primary" data-goto-review="review">原稿チェックへ進む</button>
           </div>
         </div>
       </section>
@@ -308,37 +407,49 @@
       <!-- Review -->
       <section id="view-review" class="view" aria-labelledby="review-heading" hidden>
         <nav class="breadcrumb" aria-label="パンくず">
-          <span>HOME</span><span class="breadcrumb__sep">&gt;</span><span>AIレビュー</span>
+          <span>HOME</span><span class="breadcrumb__sep">&gt;</span><span>原稿チェック</span>
         </nav>
         <div class="page-header">
-          <h1 id="review-heading">配信前AIレビュー</h1>
-          <p>原稿を入力すると、配信済みPRの型・ブランドトーンと照らし合わせてレビューします。</p>
+          <h1 id="review-heading">原稿チェック</h1>
+          <p>原稿を入力すると、ブランドトーンや表現リスクの観点からチェックします。修正後に保存してPR一覧で管理できます。</p>
         </div>
+
+        <div class="kpi-row" id="review-kpi"></div>
 
         <div class="review-layout">
           <div class="panel">
             <h3 class="panel-title">原稿入力</h3>
+            <div class="review-meta" id="review-meta"></div>
             <textarea id="draft-input" class="draft-textarea" rows="14"></textarea>
+            <div class="draft-suggestions-panel" id="draft-suggestions-panel" hidden>
+              <h4 class="draft-suggestions-panel__title">改善提案</h4>
+              <p class="text-muted draft-suggestions-panel__desc">チェック結果に基づく修正ポイントです。反映ボタンで原稿に自動挿入できます。</p>
+              <ol class="draft-suggestions-list" id="draft-suggestions-list"></ol>
+              <div class="form-actions">
+                <button type="button" class="btn btn-primary" id="apply-suggestions-btn">提案を原稿に反映</button>
+                <span class="draft-suggestions-feedback" id="draft-suggestions-feedback" hidden></span>
+              </div>
+            </div>
             <div class="form-actions">
               <button type="button" class="btn btn-secondary" id="load-sample-draft">サンプル原稿を読み込む</button>
-              <button type="button" class="btn btn-primary" id="run-review-btn">AIレビューを実行</button>
+              <button type="button" class="btn btn-primary" id="run-review-btn">チェックを実行</button>
             </div>
           </div>
 
           <div class="panel review-result-panel" id="review-result-panel" hidden>
             <div class="panel-header-row">
-              <h2 class="panel-title">レビュー結果</h2>
+              <h2 class="panel-title">チェック結果</h2>
             </div>
             <div class="loading-state" id="review-loading" hidden>
               <div class="spinner"></div>
-              <p>ブランドトーン・法令観点をチェック中…</p>
+              <p>ブランドトーン・表現リスクを確認中…</p>
             </div>
             <div id="review-result"></div>
             <div class="save-panel" id="save-panel" hidden>
               <hr class="panel-divider" />
-              <h4 class="save-panel__title">レビュー結果を保存</h4>
+              <h4 class="save-panel__title">PRを保存</h4>
               <p class="text-muted save-panel__desc">
-                原稿・レビュー・商品情報を1レコードに保存します。Phase 3 では Supabase / pgvector へ移行し RAG の学習データになります。
+                原稿・チェック結果・商品情報をまとめて保存します。配信状況や媒体情報はPR一覧から追記できます。
               </p>
               <form id="save-pr-form" class="save-form">
                 <div class="form-grid">
@@ -376,14 +487,14 @@
       <!-- Saved PR List -->
       <section id="view-saved" class="view" aria-labelledby="saved-heading" hidden>
         <nav class="breadcrumb" aria-label="パンくず">
-          <span>HOME</span><span class="breadcrumb__sep">&gt;</span><span>保存PRリスト</span>
+          <span>HOME</span><span class="breadcrumb__sep">&gt;</span><span>PR一覧</span>
         </nav>
         <div class="page-header">
-          <h1 id="saved-heading">保存PRリスト</h1>
-          <p>
-            レビュー済み原稿・配信状況・媒体・効果を蓄積します。JSONエクスポートで DB 移行、RAG インデックスの元データとして利用できます。
-          </p>
+          <h1 id="saved-heading">PR一覧</h1>
+          <p>作成中・チェック済み・配信済みのPRを一覧で管理します。次回のPR企画時にメモや効果を参照できます。</p>
         </div>
+
+        <div class="kpi-row" id="saved-kpi"></div>
 
         <div class="saved-toolbar">
           <label>
@@ -392,12 +503,17 @@
               <option value="">すべて</option>
             </select>
           </label>
-          <div class="saved-toolbar__actions">
-            <button type="button" class="btn btn-secondary" id="export-json-btn">JSONエクスポート</button>
-            <label class="btn btn-secondary import-btn">
-              JSONインポート
-              <input type="file" id="import-json-input" accept="application/json,.json" hidden />
-            </label>
+          <div class="saved-toolbar__actions saved-toolbar__actions--admin">
+            <details class="admin-tools">
+              <summary class="btn btn-secondary btn-sm">データ管理（管理者向け）</summary>
+              <div class="admin-tools__body">
+                <button type="button" class="btn btn-secondary btn-sm" id="export-json-btn">JSONエクスポート</button>
+                <label class="btn btn-secondary btn-sm import-btn">
+                  JSONインポート
+                  <input type="file" id="import-json-input" accept="application/json,.json" hidden />
+                </label>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -413,7 +529,7 @@
                   <th>ステータス</th>
                   <th>配信状況</th>
                   <th>媒体数</th>
-                  <th>推定IMP</th>
+                  <th>PR TIMES view</th>
                   <th>スコア</th>
                   <th></th>
                 </tr>
@@ -441,6 +557,6 @@
       </div>
     </footer>
 
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app.js?v=1.3.1"></script>
   </body>
 </html>
