@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PR AX デモ｜ノエビア（PoC Phase 1）</title>
+    <meta
+      name="description"
+      content="プレスリリースAX化 PoC デモ — 配信済みPR型化・ターゲティング予測・PR整理エージェント・AIレビュー"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">メインコンテンツへ</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <div class="brand-lockup">
+          <span class="brand-badge">PoC Demo</span>
+          <h1 class="site-title">PR AX Studio</h1>
+          <p class="site-subtitle">ノエビア｜プレスリリース支援（Phase 1）</p>
+        </div>
+        <nav class="main-nav" aria-label="メインナビゲーション">
+          <button type="button" class="nav-btn is-active" data-view="dashboard">ダッシュボード</button>
+          <button type="button" class="nav-btn" data-view="assets">PR資産・型化</button>
+          <button type="button" class="nav-btn" data-view="create">新規PR作成</button>
+          <button type="button" class="nav-btn" data-view="review">AIレビュー</button>
+        </nav>
+        <button type="button" class="menu-toggle" aria-label="メニューを開く" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="demo-banner" role="status">
+      <span class="demo-banner__icon" aria-hidden="true">ℹ</span>
+      これは<strong>PoCデモ画面</strong>です。AI応答はモックデータで動作します。実データは常盤薬品工業ニュース一覧を参考にしています。
+    </div>
+
+    <main id="main" class="main-content">
+      <!-- Dashboard -->
+      <section id="view-dashboard" class="view is-active" aria-labelledby="dashboard-heading">
+        <div class="page-header">
+          <h2 id="dashboard-heading">ダッシュボード</h2>
+          <p>Phase 1 PoC の業務フローを体験できます。左から順に進めてください。</p>
+        </div>
+
+        <div class="workflow-grid">
+          <article class="workflow-card" data-goto="assets">
+            <span class="workflow-step">Step 1</span>
+            <h3>配信済みPRの型化</h3>
+            <p>エクセルブランドの勝ちパターン（タイトル型・訴求軸）を確認</p>
+            <span class="workflow-status is-done">データ準備済</span>
+          </article>
+          <article class="workflow-card" data-goto="create">
+            <span class="workflow-step">Step 2</span>
+            <h3>ターゲティング予測</h3>
+            <p>商品情報からターゲット像・訴求キーワードをAIが提案</p>
+            <span class="workflow-status">体験可能</span>
+          </article>
+          <article class="workflow-card" data-goto="create">
+            <span class="workflow-step">Step 3</span>
+            <h3>PR整理エージェント</h3>
+            <p>対話形式で切り口・見出し案・企画メモを整理</p>
+            <span class="workflow-status">体験可能</span>
+          </article>
+          <article class="workflow-card" data-goto="review">
+            <span class="workflow-step">Step 4</span>
+            <h3>配信前AIレビュー</h3>
+            <p>原稿をブランドトーン・法令観点でスコアリング</p>
+            <span class="workflow-status">体験可能</span>
+          </article>
+        </div>
+
+        <div class="dashboard-panels">
+          <div class="panel">
+            <h3 class="panel-title">PoC対象ブランド</h3>
+            <div class="brand-highlight">
+              <span class="brand-name" id="dash-brand-name"></span>
+              <p id="dash-brand-tone"></p>
+            </div>
+          </div>
+          <div class="panel">
+            <h3 class="panel-title">直近の配信済みPR（サンプル）</h3>
+            <ul class="pr-mini-list" id="dash-pr-list"></ul>
+          </div>
+          <div class="panel panel--accent">
+            <h3 class="panel-title">Phase 1 スコープ</h3>
+            <ul class="scope-list">
+              <li class="is-in">配信済みPR型化</li>
+              <li class="is-in">ターゲティング予測</li>
+              <li class="is-in">PR整理エージェント</li>
+              <li class="is-in">配信前AIレビュー</li>
+              <li class="is-out">類似PR検索（Phase 2）</li>
+              <li class="is-out">メディア管理（Phase 2）</li>
+              <li class="is-out">自動配信（Phase 3）</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Assets -->
+      <section id="view-assets" class="view" aria-labelledby="assets-heading" hidden>
+        <div class="page-header">
+          <h2 id="assets-heading">配信済みPR資産・型化</h2>
+          <p>
+            配信済みプレスリリースを分析し、ブランド別の「勝ちパターン」を整理します。
+            <span class="text-muted">（データ出典：常盤薬品工業 ニュース一覧）</span>
+          </p>
+        </div>
+
+        <div class="filter-bar">
+          <label>
+            ブランド
+            <select id="brand-filter">
+              <option value="エクセル" selected>エクセル</option>
+            </select>
+          </label>
+          <span class="filter-meta" id="pr-count-label"></span>
+        </div>
+
+        <div class="assets-layout">
+          <div class="panel">
+            <h3 class="panel-title">タイトルの型</h3>
+            <div class="pattern-list" id="pattern-list"></div>
+          </div>
+          <div class="panel">
+            <h3 class="panel-title">訴求軸の分布</h3>
+            <div class="appeal-chart" id="appeal-chart"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3 class="panel-title">配信済みPR一覧</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>日付</th>
+                  <th>カテゴリ</th>
+                  <th>タイトル</th>
+                  <th>型</th>
+                  <th>推定IMP</th>
+                </tr>
+              </thead>
+              <tbody id="pr-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3 class="panel-title">ブランドトーン指針</h3>
+          <div class="tone-guide">
+            <div>
+              <h4>推奨トーン</h4>
+              <p id="brand-tone-text"></p>
+            </div>
+            <div>
+              <h4>注意表現</h4>
+              <ul id="brand-forbidden-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Create PR -->
+      <section id="view-create" class="view" aria-labelledby="create-heading" hidden>
+        <div class="page-header">
+          <h2 id="create-heading">新規PR作成</h2>
+          <p>商品情報入力 → ターゲティング予測 → PR整理エージェント → 企画メモ出力</p>
+        </div>
+
+        <div class="stepper" id="create-stepper">
+          <button type="button" class="stepper-item is-active" data-step="1">1. 商品情報</button>
+          <button type="button" class="stepper-item" data-step="2">2. ターゲティング</button>
+          <button type="button" class="stepper-item" data-step="3">3. PR整理</button>
+          <button type="button" class="stepper-item" data-step="4">4. 企画メモ</button>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="create-step is-active" data-step="1">
+          <form class="product-form panel" id="product-form">
+            <h3 class="panel-title">商品情報を入力</h3>
+            <div class="form-grid">
+              <label>
+                商品名
+                <input type="text" name="name" required />
+              </label>
+              <label>
+                ブランド名
+                <input type="text" name="brand" required />
+              </label>
+              <label>
+                商品カテゴリ
+                <input type="text" name="category" required />
+              </label>
+              <label>
+                価格帯
+                <input type="text" name="price" />
+              </label>
+              <label>
+                発売区分
+                <select name="releaseType">
+                  <option>新色追加</option>
+                  <option>新規発売</option>
+                  <option>リニューアル</option>
+                  <option>限定発売</option>
+                </select>
+              </label>
+              <label>
+                発売時期・季節性
+                <input type="text" name="season" />
+              </label>
+              <label class="full-width">
+                主要成分・特徴
+                <textarea name="features" rows="3"></textarea>
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">ターゲティング予測へ</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="create-step" data-step="2" hidden>
+          <div class="targeting-layout">
+            <div class="panel">
+              <div class="panel-header-row">
+                <h3 class="panel-title">AIターゲティング予測</h3>
+                <span class="ai-badge">AI Mock</span>
+              </div>
+              <div class="loading-state" id="targeting-loading">
+                <div class="spinner" aria-hidden="true"></div>
+                <p>配信済みPRの型と商品情報を分析中…</p>
+              </div>
+              <div class="targeting-result" id="targeting-result" hidden></div>
+            </div>
+            <aside class="panel panel--secondary">
+              <h3 class="panel-title">参照した型</h3>
+              <p class="text-muted">エクセル過去PRから、実績数値型・新色追加型の反応が高い傾向を検出しました。</p>
+              <ul class="ref-patterns" id="ref-patterns"></ul>
+            </aside>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" data-back="1">戻る</button>
+            <button type="button" class="btn btn-primary" data-next="3">PR整理エージェントへ</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="create-step" data-step="3" hidden>
+          <div class="agent-layout">
+            <div class="panel chat-panel">
+              <div class="panel-header-row">
+                <h3 class="panel-title">PR整理エージェント</h3>
+                <span class="ai-badge">AI Mock</span>
+              </div>
+              <div class="chat-messages" id="chat-messages" aria-live="polite"></div>
+              <form class="chat-input-row" id="chat-form">
+                <input type="text" placeholder="メッセージを入力（デモでは固定応答）" aria-label="メッセージ" />
+                <button type="submit" class="btn btn-primary">送信</button>
+              </form>
+            </div>
+            <aside class="panel memo-preview" id="memo-preview" hidden>
+              <h3 class="panel-title">PR企画メモ（プレビュー）</h3>
+              <p class="text-muted">対話完了後に詳細を表示します</p>
+            </aside>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" data-back="2">戻る</button>
+            <button type="button" class="btn btn-primary" id="show-memo-btn">企画メモを表示</button>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="create-step" data-step="4" hidden>
+          <div class="panel" id="planning-memo"></div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" data-back="3">戻る</button>
+            <button type="button" class="btn btn-primary" data-goto-review="review">原稿をAIレビューへ</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Review -->
+      <section id="view-review" class="view" aria-labelledby="review-heading" hidden>
+        <div class="page-header">
+          <h2 id="review-heading">配信前AIレビュー</h2>
+          <p>原稿を入力すると、配信済みPRの型・ブランドトーンと照らし合わせてレビューします。</p>
+        </div>
+
+        <div class="review-layout">
+          <div class="panel">
+            <h3 class="panel-title">原稿入力</h3>
+            <textarea id="draft-input" class="draft-textarea" rows="14"></textarea>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="load-sample-draft">サンプル原稿を読み込む</button>
+              <button type="button" class="btn btn-primary" id="run-review-btn">AIレビューを実行</button>
+            </div>
+          </div>
+
+          <div class="panel review-result-panel" id="review-result-panel" hidden>
+            <div class="panel-header-row">
+              <h3 class="panel-title">レビュー結果</h3>
+              <span class="ai-badge">AI Mock</span>
+            </div>
+            <div class="loading-state" id="review-loading" hidden>
+              <div class="spinner"></div>
+              <p>ブランドトーン・法令観点をチェック中…</p>
+            </div>
+            <div id="review-result"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        PR AX Studio — PoC Demo by AiTRIGGER<br />
+        <span class="text-muted">デザイン参考：常盤薬品工業（ノエビアグループ）コーポレートサイト</span>
+      </p>
+    </footer>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
